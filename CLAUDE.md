@@ -38,6 +38,7 @@ get an explanation and a quiz. Nothing beyond this until v1 works.
 - [x] Step 1: Project scaffold, types, CLAUDE.md
 - [x] Step 2: Character creation form + localStorage
 - [x] Step 3: Home page (character selection)
-- [ ] Step 4: Chat mode with memory
+- [x] Step 4a: AI backend wiring (prompt builder, Gemini client, chat API)
+- [ ] Step 4b: Chat mode UI with memory
 - [ ] Step 5: Study mode (explain + quiz)
 - [ ] Step 6: Mode toggle + polish
