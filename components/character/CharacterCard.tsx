@@ -8,7 +8,7 @@ interface CharacterCardProps {
   onDelete: (id: string) => void;
 }
 
-const TRAITS_PREVIEW_LENGTH = 80;
+const PERSONALITY_PREVIEW_LENGTH = 80;
 
 function truncate(text: string, length: number): string {
   if (text.length <= length) return text;
@@ -22,15 +22,20 @@ export default function CharacterCard({ character, onDelete }: CharacterCardProp
     onDelete(character.id);
   }
 
+  const personalityPreview = [
+    ...character.personality,
+    ...(character.personalityOther ? [character.personalityOther] : []),
+  ].join(", ");
+
   return (
     <Link
       href={`/chat/${character.id}`}
       className="relative flex flex-col gap-2 rounded-xl border border-zinc-200 p-5 shadow-sm transition-colors hover:border-zinc-400 hover:shadow-md dark:border-zinc-800 dark:hover:border-zinc-600"
     >
       <h2 className="text-lg font-semibold">{character.name}</h2>
-      {character.traits && (
+      {personalityPreview && (
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          {truncate(character.traits, TRAITS_PREVIEW_LENGTH)}
+          {truncate(personalityPreview, PERSONALITY_PREVIEW_LENGTH)}
         </p>
       )}
 
