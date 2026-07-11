@@ -46,7 +46,8 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ reply });
-  } catch {
+  } catch (error) {
+    console.error("Chat API error:", error);
     return NextResponse.json(
       { error: "Something went wrong while generating a reply." },
       { status: 500 }

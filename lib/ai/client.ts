@@ -4,7 +4,7 @@ import { GoogleGenAI } from "@google/genai";
 // code must call generateChatReply() below instead of touching @google/genai
 // directly, so the backend can be swapped (e.g. to Anthropic) later.
 
-const MODEL = "gemini-2.5-flash";
+const MODEL = "gemini-flash-latest";
 
 let client: GoogleGenAI | null = null;
 
@@ -56,7 +56,8 @@ export async function generateChatReply({
     }
 
     return text;
-  } catch {
+  } catch (error) {
+    console.error("Gemini client error:", error);
     throw new Error("Failed to generate a reply from the AI backend.");
   }
 }

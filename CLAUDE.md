@@ -39,6 +39,6 @@ get an explanation and a quiz. Nothing beyond this until v1 works.
 - [x] Step 2: Character creation form + localStorage
 - [x] Step 3: Home page (character selection)
 - [x] Step 4a: AI backend wiring (prompt builder, Gemini client, chat API)
-- [ ] Step 4b: Chat mode UI with memory
+- [x] Step 4b: Chat mode UI with memory
 - [ ] Step 5: Study mode (explain + quiz)
 - [ ] Step 6: Mode toggle + polish
