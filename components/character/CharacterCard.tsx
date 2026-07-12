@@ -6,6 +6,7 @@ import type { Character } from "@/lib/types";
 interface CharacterCardProps {
   character: Character;
   onDelete: (id: string) => void;
+  accent?: "sky" | "star";
 }
 
 const PERSONALITY_PREVIEW_LENGTH = 80;
@@ -15,7 +16,7 @@ function truncate(text: string, length: number): string {
   return `${text.slice(0, length).trimEnd()}…`;
 }
 
-export default function CharacterCard({ character, onDelete }: CharacterCardProps) {
+export default function CharacterCard({ character, onDelete, accent = "sky" }: CharacterCardProps) {
   const router = useRouter();
 
   function handleCardClick() {
@@ -45,11 +46,13 @@ export default function CharacterCard({ character, onDelete }: CharacterCardProp
       tabIndex={0}
       onClick={handleCardClick}
       onKeyDown={handleCardKeyDown}
-      className="relative flex cursor-pointer flex-col gap-2 rounded-xl border border-zinc-200 p-5 shadow-sm transition-colors hover:border-zinc-400 hover:shadow-md dark:border-zinc-800 dark:hover:border-zinc-600"
+      className={`relative flex cursor-pointer flex-col gap-2 overflow-hidden rounded-3xl border-2 border-t-4 border-line bg-paper p-5 pt-6 shadow-sm transition-all hover:-translate-y-0.5 hover:border-ink/30 hover:shadow-lg ${
+        accent === "star" ? "border-t-star" : "border-t-sky"
+      }`}
     >
-      <h2 className="text-lg font-semibold">{character.name}</h2>
+      <h2 className="text-xl font-bold text-ink">{character.name}</h2>
       {personalityPreview && (
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-sm text-muted">
           {truncate(personalityPreview, PERSONALITY_PREVIEW_LENGTH)}
         </p>
       )}
@@ -57,7 +60,7 @@ export default function CharacterCard({ character, onDelete }: CharacterCardProp
       <button
         type="button"
         onClick={handleDelete}
-        className="absolute right-3 top-3 rounded-md px-2 py-1 text-xs font-medium text-zinc-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 dark:hover:text-red-400"
+        className="absolute right-3 top-3 rounded-full px-2.5 py-1 text-sm font-medium text-muted transition-colors hover:bg-red-50 hover:text-red-600"
       >
         Delete
       </button>

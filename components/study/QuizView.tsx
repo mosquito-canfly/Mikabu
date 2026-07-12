@@ -30,7 +30,7 @@ export default function QuizView({ questions }: QuizViewProps) {
 
         return (
           <div key={questionIndex} className="flex flex-col gap-3">
-            <p className="font-medium">
+            <p className="text-base font-normal text-ink">
               {questionIndex + 1}. {question.question}
             </p>
             <div className="flex flex-col gap-2">
@@ -39,13 +39,16 @@ export default function QuizView({ questions }: QuizViewProps) {
                 const isSelectedOption = optionIndex === selected;
 
                 let stateClasses =
-                  "border-zinc-300 hover:border-zinc-400 dark:border-zinc-700 dark:hover:border-zinc-500";
+                  "border-line bg-paper text-ink hover:border-ink/50 hover:bg-line/30";
+                let marker = "";
                 if (isAnswered && isCorrectOption) {
-                  stateClasses =
-                    "border-green-500 bg-green-50 text-green-800 dark:bg-green-950 dark:text-green-300";
+                  stateClasses = "border-ink bg-sky text-ink font-bold";
+                  marker = "✓ ";
                 } else if (isAnswered && isSelectedOption) {
-                  stateClasses =
-                    "border-red-500 bg-red-50 text-red-800 dark:bg-red-950 dark:text-red-300";
+                  stateClasses = "border-ink bg-paper text-ink line-through";
+                  marker = "✗ ";
+                } else if (isAnswered) {
+                  stateClasses = "border-line bg-paper text-muted opacity-70";
                 }
 
                 return (
@@ -54,8 +57,9 @@ export default function QuizView({ questions }: QuizViewProps) {
                     type="button"
                     disabled={isAnswered}
                     onClick={() => handleSelect(questionIndex, optionIndex)}
-                    className={`rounded-md border px-3 py-2 text-left text-sm transition-colors disabled:cursor-not-allowed ${stateClasses}`}
+                    className={`rounded-2xl border-2 px-4 py-2.5 text-left text-base transition-colors disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky ${stateClasses}`}
                   >
+                    {marker}
                     {option}
                   </button>
                 );
@@ -66,7 +70,7 @@ export default function QuizView({ questions }: QuizViewProps) {
       })}
 
       {allAnswered && (
-        <p className="text-center text-lg font-semibold">
+        <p className="w-fit self-center rounded-full bg-sky px-5 py-2 text-center text-lg font-bold text-ink">
           {score} / {questions.length} correct
         </p>
       )}

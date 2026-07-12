@@ -76,10 +76,10 @@ function Chip({ label, selected, onClick }: ChipProps) {
       type="button"
       onClick={onClick}
       aria-pressed={selected}
-      className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+      className={`rounded-full border-2 px-3.5 py-1.5 text-sm font-medium transition-all active:scale-95 ${
         selected
-          ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900"
-          : "border-zinc-300 bg-transparent text-zinc-700 hover:border-zinc-400 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-500"
+          ? "border-ink bg-ink text-paper shadow-sm"
+          : "border-line bg-paper text-ink hover:border-ink/50 hover:bg-line/40"
       }`}
     >
       {label}
@@ -88,7 +88,9 @@ function Chip({ label, selected, onClick }: ChipProps) {
 }
 
 const inputClasses =
-  "rounded-md border border-zinc-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:border-zinc-700 dark:bg-zinc-900";
+  "rounded-2xl border-2 border-line bg-paper px-4 py-2.5 text-base text-ink placeholder:text-muted transition-colors focus-visible:outline-none focus-visible:border-sky focus-visible:ring-2 focus-visible:ring-sky";
+
+const labelClasses = "text-lg font-medium text-ink";
 
 export default function CharacterForm({ onSubmit }: CharacterFormProps) {
   const [name, setName] = useState("");
@@ -162,7 +164,7 @@ export default function CharacterForm({ onSubmit }: CharacterFormProps) {
     >
       {/* Name */}
       <div className="flex flex-col gap-2">
-        <label htmlFor="name" className="text-lg font-semibold">
+        <label htmlFor="name" className={labelClasses}>
           Name <RequiredMark />
         </label>
         <input
@@ -177,7 +179,7 @@ export default function CharacterForm({ onSubmit }: CharacterFormProps) {
 
       {/* Gender */}
       <div className="flex flex-col gap-2">
-        <label className="text-lg font-semibold">
+        <label className={labelClasses}>
           Gender <RequiredMark />
         </label>
         <div className="flex flex-wrap gap-2">
@@ -203,7 +205,7 @@ export default function CharacterForm({ onSubmit }: CharacterFormProps) {
 
       {/* Age */}
       <div className="flex flex-col gap-2">
-        <label htmlFor="age" className="text-lg font-semibold">
+        <label htmlFor="age" className={labelClasses}>
           Age <RequiredMark />
         </label>
         <input
@@ -220,7 +222,7 @@ export default function CharacterForm({ onSubmit }: CharacterFormProps) {
 
       {/* Personality */}
       <div className="flex flex-col gap-2">
-        <label className="text-lg font-semibold">
+        <label className={labelClasses}>
           Personality <RequiredMark />
         </label>
         <div className="flex flex-wrap gap-2">
@@ -251,7 +253,7 @@ export default function CharacterForm({ onSubmit }: CharacterFormProps) {
 
       {/* Occupation */}
       <div className="flex flex-col gap-2">
-        <label htmlFor="occupation" className="text-lg font-semibold">
+        <label htmlFor="occupation" className={labelClasses}>
           Occupation <RequiredMark />
         </label>
         <input
@@ -266,12 +268,10 @@ export default function CharacterForm({ onSubmit }: CharacterFormProps) {
 
       {/* Relationship */}
       <div className="flex flex-col gap-2">
-        <label htmlFor="relationship" className="text-lg font-semibold">
+        <label htmlFor="relationship" className={labelClasses}>
           Relationship <RequiredMark />
         </label>
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">
-          Who is this character to you?
-        </p>
+        <p className="text-sm text-muted">Who is this character to you?</p>
         <input
           id="relationship"
           type="text"
@@ -284,12 +284,10 @@ export default function CharacterForm({ onSubmit }: CharacterFormProps) {
 
       {/* Setting World */}
       <div className="flex flex-col gap-2">
-        <label htmlFor="setting" className="text-lg font-semibold">
+        <label htmlFor="setting" className={labelClasses}>
           Setting World <RequiredMark />
         </label>
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">
-          Where does the character usually live in?
-        </p>
+        <p className="text-sm text-muted">Where does the character usually live in?</p>
         <input
           id="setting"
           type="text"
@@ -302,7 +300,7 @@ export default function CharacterForm({ onSubmit }: CharacterFormProps) {
 
       {/* Speaking Style */}
       <div className="flex flex-col gap-2">
-        <label className="text-lg font-semibold">
+        <label className={labelClasses}>
           Speaking Style <RequiredMark />
         </label>
         <div className="flex flex-wrap gap-2">
@@ -335,7 +333,7 @@ export default function CharacterForm({ onSubmit }: CharacterFormProps) {
 
       {/* Additional Information */}
       <div className="flex flex-col gap-2">
-        <label htmlFor="additionalInfo" className="text-lg font-semibold">
+        <label htmlFor="additionalInfo" className={labelClasses}>
           Additional Information
         </label>
         <textarea
@@ -351,7 +349,7 @@ export default function CharacterForm({ onSubmit }: CharacterFormProps) {
       <button
         type="submit"
         disabled={!isFormValid}
-        className="mt-2 rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:bg-zinc-300 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300 dark:disabled:bg-zinc-700"
+        className="mt-2 rounded-full bg-ink px-4 py-2.5 text-base font-medium text-paper transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:bg-line disabled:text-muted disabled:opacity-100"
       >
         Create Character
       </button>

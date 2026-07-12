@@ -24,11 +24,11 @@ export default function CharacterPage() {
 
   if (character === null) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center gap-3 px-4 text-center">
-        <h1 className="text-3xl font-semibold">Character not found</h1>
+      <main className="flex min-h-screen flex-col items-center justify-center gap-3 bg-paper px-4 text-center">
+        <h1 className="text-3xl font-bold text-ink">Character not found</h1>
         <Link
           href="/"
-          className="text-sm font-medium text-zinc-600 underline underline-offset-4 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+          className="text-base font-medium text-muted underline underline-offset-4 transition-colors hover:text-ink"
         >
           Back home
         </Link>
@@ -37,15 +37,15 @@ export default function CharacterPage() {
   }
 
   return (
-    <main className="flex h-screen flex-col">
-      <header className="flex items-center gap-3 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
+    <main className="flex h-screen flex-col bg-paper">
+      <header className="flex items-center gap-4 border-b border-line px-4 py-3">
         <Link
           href="/"
-          className="text-sm font-medium text-zinc-600 underline underline-offset-4 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+          className="text-base font-medium text-muted underline underline-offset-4 transition-colors hover:text-ink"
         >
           ← Back
         </Link>
-        <h1 className="text-lg font-semibold">{character.name}</h1>
+        <h1 className="text-xl font-bold text-ink">{character.name}</h1>
         <div className="ml-auto">
           <ModeToggle mode={mode} onChange={setMode} />
         </div>

@@ -22,7 +22,7 @@ export default function StudyToolbar({ onSelect, disabled }: StudyToolbarProps) 
           type="button"
           disabled={disabled}
           onClick={() => onSelect(tool.value)}
-          className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:bg-zinc-300 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300 dark:disabled:bg-zinc-700"
+          className="rounded-full bg-sky px-4 py-2 text-base font-medium text-ink transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky disabled:cursor-not-allowed disabled:bg-line disabled:text-muted"
         >
           {tool.label}
         </button>

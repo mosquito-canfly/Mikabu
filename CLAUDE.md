@@ -34,6 +34,48 @@ get an explanation and a quiz. Nothing beyond this until v1 works.
 - Do not reference this CLAUDE.md file in commit messages.
 - Keep changes tightly scoped to the current step; do not build ahead.
 
+## Design system
+Friendly, handwritten, engaging — for students and teenagers. Warm and playful,
+not corporate, not childish.
+
+- Tokens are defined once in app/globals.css as CSS variables (`--paper`, `--sky`,
+  `--star`, `--ink`, `--muted`, `--line`) and mapped into Tailwind via `@theme inline`
+  as `--color-*`, so they're usable as ordinary utilities: `bg-paper`, `text-ink`,
+  `border-line`, `bg-sky`, `bg-star`, `text-muted`, etc. Do not introduce colors
+  outside this set (red is kept only as an existing exception for the required-field
+  asterisk and destructive/error states — delete actions, error banners).
+      --paper: #ffffff   base background
+      --sky:   #a7e1f2   STUDY mode accent
+      --star:  #f0efaf   CHAT mode accent
+      --ink:   #2b2b33   primary text, solid buttons
+      --muted: #7c7c8a   secondary text, placeholders, helper text
+      --line:  #e6e6ea   borders, dividers
+  Accent tints (`--sky`, `--star`) are pale — text on an accent is always `--ink`,
+  never `--paper`.
+- Font: Fredoka everywhere, loaded via `next/font/google` in app/layout.tsx as the
+  `--font-fredoka` variable (variable weight, no fixed `weight` prop needed), mapped
+  to `--font-sans` and applied to `body`. Base font-size is the normal 16px root
+  (no compensation bump) with `line-height: 1.5` on body — Fredoka is a rounded sans
+  with real weights, not a handwriting face, so it reads comfortably at normal size.
+  Weight is used deliberately: `font-bold` (700) for headings and the Mikabu
+  wordmark, `font-medium` (500) for buttons, labels, and session titles, `font-normal`
+  (400, the body default) for message bubbles and study output. The quiz's
+  correct-answer highlight and score banner keep `font-bold` as part of the
+  correct/incorrect state language (see below), not as a typography-scale choice.
+- Mode color coding: the layout is identical between Chat and Study — only the
+  accent changes. Chat leans `--star` (assistant bubbles, active session row, "New
+  chat" button). Study leans `--sky` (active session row, "New study" button, tool
+  buttons, result cards). components/SessionSidebar.tsx takes an `accent: "sky" |
+  "star"` prop so the one shared sidebar component can carry either tint without
+  duplicating it. The Chat/Study toggle shows the active mode in that mode's accent.
+- Home page stays mostly paper/white; accents are used sparingly (e.g. character
+  cards alternate a thin sky/star top border) rather than committing to one mode.
+- Quiz correct/incorrect states are shown via symbol + weight + fill (✓ filled sky /
+  ✗ outlined line-through), not via new green/red hues, to stay inside the palette.
+- Global `:focus-visible` outline in globals.css is the baseline keyboard-focus
+  guarantee; components layer `focus-visible:ring-2` in their mode's accent on top.
+- `prefers-reduced-motion: reduce` disables/shortens transitions app-wide.
+
 ## Build progress
 - [x] Step 1: Project scaffold, types, CLAUDE.md
 - [x] Step 2: Character creation form + localStorage

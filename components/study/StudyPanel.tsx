@@ -250,6 +250,7 @@ export default function StudyPanel({ character }: StudyPanelProps) {
             newLabel="New study"
             emptyLabel="No study sessions yet."
             newDisabled={isNewSessionDisabled}
+            accent="sky"
             onSelect={handleSelectSession}
             onNew={handleNewSession}
             onRename={handleRenameSession}
@@ -259,11 +260,11 @@ export default function StudyPanel({ character }: StudyPanelProps) {
       )}
 
       <div className="flex h-full min-h-0 flex-1 flex-col">
-        <div className="flex items-center border-b border-zinc-200 px-3 py-2 dark:border-zinc-800">
+        <div className="flex items-center border-b border-line px-3 py-2">
           <button
             type="button"
             onClick={() => setSidebarOpen((open) => !open)}
-            className="rounded-md px-2 py-1 text-xs font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+            className="rounded-full px-3 py-1 text-sm font-medium text-muted transition-colors hover:bg-line/40 hover:text-ink"
           >
             {sidebarOpen ? "Hide sessions" : "Show sessions"}
           </button>
@@ -275,27 +276,25 @@ export default function StudyPanel({ character }: StudyPanelProps) {
             <StudyToolbar onSelect={handleSelectTool} disabled={isLoading} />
 
             {isLoading && (
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                {character.name} is working on it...
-              </p>
+              <p className="text-base text-muted">{character.name} is working on it...</p>
             )}
 
             {error && (
-              <p className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300">
+              <p className="rounded-2xl border-2 border-red-200 bg-red-50 px-4 py-2.5 text-base text-red-700">
                 {error}
               </p>
             )}
 
             {activeSession?.results.map((result) => (
-              <div key={result.id} className="flex flex-col gap-2">
-                <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+              <div key={result.id} className="flex flex-col gap-3 rounded-3xl border-2 border-line bg-sky/25 p-4">
+                <span className="w-fit rounded-full bg-sky px-3 py-1 text-sm font-medium text-ink">
                   {TOOL_LABELS[result.tool]}
-                </p>
+                </span>
 
                 {result.tool === "quiz" ? (
                   <QuizView questions={result.questions ?? []} />
                 ) : (
-                  <div className="break-words text-sm leading-relaxed">
+                  <div className="break-words text-base leading-relaxed text-ink">
                     <Markdown components={markdownComponents}>{result.text ?? ""}</Markdown>
                   </div>
                 )}

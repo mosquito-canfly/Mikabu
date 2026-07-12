@@ -22,36 +22,35 @@ export default function Home() {
     <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-10 px-4 py-16">
       <header className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-semibold">Mikabu</h1>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            Your character, your story
-          </p>
+          <h1 className="text-4xl font-bold text-ink sm:text-5xl">Mikabu</h1>
+          <p className="mt-2 text-lg text-muted">Your character, your story</p>
         </div>
         <Link
           href="/create"
-          className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+          className="rounded-full bg-ink px-5 py-2.5 text-base font-medium text-paper transition-opacity hover:opacity-90"
         >
           New Character
         </Link>
       </header>
 
       {characters.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-zinc-300 py-24 text-center dark:border-zinc-700">
-          <p className="text-lg font-medium">Create your own character now!</p>
+        <div className="flex flex-1 flex-col items-center justify-center gap-5 rounded-3xl border-2 border-dashed border-line py-24 text-center">
+          <p className="text-xl font-bold text-ink">Create your own character now!</p>
           <Link
             href="/create"
-            className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+            className="rounded-full bg-ink px-5 py-2.5 text-base font-medium text-paper transition-opacity hover:opacity-90"
           >
             New Character
           </Link>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {characters.map((character) => (
+          {characters.map((character, index) => (
             <CharacterCard
               key={character.id}
               character={character}
               onDelete={handleDelete}
+              accent={index % 2 === 0 ? "sky" : "star"}
             />
           ))}
         </div>
