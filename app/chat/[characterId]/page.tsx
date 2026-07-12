@@ -55,7 +55,7 @@ export default function CharacterPage() {
         <div className={mode === "chat" ? "flex h-full min-h-0 flex-1 flex-col" : "hidden"}>
           <ChatWindow character={character} />
         </div>
-        <div className={mode === "study" ? "h-full flex-1 overflow-y-auto" : "hidden"}>
+        <div className={mode === "study" ? "flex h-full min-h-0 flex-1 flex-col" : "hidden"}>
           <StudyPanel character={character} />
         </div>
       </div>

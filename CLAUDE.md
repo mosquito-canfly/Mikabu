@@ -45,3 +45,4 @@ get an explanation and a quiz. Nothing beyond this until v1 works.
 - [x] Step 6b: Persist chat history
 - [x] Step 7: Multi-session chat history with sidebar
 - [x] Step 8: Bug fixes (sidebar dropdown, markdown rendering)
+- [x] Step 9: Study sessions with history sidebar

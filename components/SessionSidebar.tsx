@@ -1,20 +1,28 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { ChatSession } from "@/lib/types";
+
+interface SessionSidebarItem {
+  id: string;
+  title: string;
+}
 
 interface SessionSidebarProps {
-  sessions: ChatSession[];
-  activeSessionId: string;
-  onSelect: (sessionId: string) => void;
+  items: SessionSidebarItem[];
+  activeId: string;
+  newLabel: string;
+  emptyLabel: string;
+  onSelect: (id: string) => void;
   onNew: () => void;
-  onRename: (sessionId: string, newTitle: string) => void;
-  onDelete: (sessionId: string) => void;
+  onRename: (id: string, newTitle: string) => void;
+  onDelete: (id: string) => void;
 }
 
 export default function SessionSidebar({
-  sessions,
-  activeSessionId,
+  items,
+  activeId,
+  newLabel,
+  emptyLabel,
   onSelect,
   onNew,
   onRename,
@@ -32,32 +40,32 @@ export default function SessionSidebar({
           onClick={onNew}
           className="w-full rounded-md bg-zinc-900 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
         >
-          + New chat
+          + {newLabel}
         </button>
       </div>
 
       <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto px-2 pb-3">
-        {sessions.length === 0 ? (
+        {items.length === 0 ? (
           <p className="px-2 py-4 text-center text-sm text-zinc-500 dark:text-zinc-400">
-            No chats yet.
+            {emptyLabel}
           </p>
         ) : (
           <ul className="flex flex-col gap-1">
-            {sessions.map((session) => (
+            {items.map((item) => (
               <SessionRow
-                key={session.id}
-                session={session}
-                isActive={session.id === activeSessionId}
-                isMenuOpen={openMenuId === session.id}
-                isEditing={editingId === session.id}
+                key={item.id}
+                item={item}
+                isActive={item.id === activeId}
+                isMenuOpen={openMenuId === item.id}
+                isEditing={editingId === item.id}
                 containerRef={listRef}
-                onSelect={() => onSelect(session.id)}
-                onOpenMenu={() => setOpenMenuId(session.id)}
+                onSelect={() => onSelect(item.id)}
+                onOpenMenu={() => setOpenMenuId(item.id)}
                 onCloseMenu={() =>
-                  setOpenMenuId((current) => (current === session.id ? null : current))
+                  setOpenMenuId((current) => (current === item.id ? null : current))
                 }
                 onStartRename={() => {
-                  setEditingId(session.id);
+                  setEditingId(item.id);
                   setOpenMenuId(null);
                 }}
                 onCancelRename={() => setEditingId(null)}
@@ -65,13 +73,13 @@ export default function SessionSidebar({
                   setEditingId(null);
                   const trimmed = newTitle.trim();
                   if (trimmed.length > 0) {
-                    onRename(session.id, trimmed);
+                    onRename(item.id, trimmed);
                   }
                 }}
                 onDelete={() => {
                   setOpenMenuId(null);
-                  if (window.confirm(`Delete "${session.title}"? This cannot be undone.`)) {
-                    onDelete(session.id);
+                  if (window.confirm(`Delete "${item.title}"? This cannot be undone.`)) {
+                    onDelete(item.id);
                   }
                 }}
               />
@@ -84,7 +92,7 @@ export default function SessionSidebar({
 }
 
 interface SessionRowProps {
-  session: ChatSession;
+  item: SessionSidebarItem;
   isActive: boolean;
   isMenuOpen: boolean;
   isEditing: boolean;
@@ -101,7 +109,7 @@ interface SessionRowProps {
 const ESTIMATED_MENU_HEIGHT = 84;
 
 function SessionRow({
-  session,
+  item,
   isActive,
   isMenuOpen,
   isEditing,
@@ -117,14 +125,14 @@ function SessionRow({
   const menuRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const [editValue, setEditValue] = useState(session.title);
+  const [editValue, setEditValue] = useState(item.title);
   const [openUpward, setOpenUpward] = useState(false);
 
   useEffect(() => {
     if (isEditing) {
-      setEditValue(session.title);
+      setEditValue(item.title);
     }
-  }, [isEditing, session.title]);
+  }, [isEditing, item.title]);
 
   useEffect(() => {
     if (isEditing) {
@@ -189,7 +197,7 @@ function SessionRow({
               : "text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
           }`}
         >
-          <span className="min-w-0 flex-1 truncate">{session.title}</span>
+          <span className="min-w-0 flex-1 truncate">{item.title}</span>
         </button>
       )}
 
@@ -223,14 +231,14 @@ function SessionRow({
                 onClick={onStartRename}
                 className="block w-full px-3 py-1.5 text-left text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
               >
-                Rename chat
+                Rename
               </button>
               <button
                 type="button"
                 onClick={onDelete}
                 className="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950"
               >
-                Delete chat
+                Delete
               </button>
             </div>
           )}

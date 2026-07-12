@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import MessageBubble from "@/components/chat/MessageBubble";
 import ChatInput from "@/components/chat/ChatInput";
-import SessionSidebar from "@/components/chat/SessionSidebar";
+import SessionSidebar from "@/components/SessionSidebar";
 import { deleteSession, getSessionsForCharacter, saveSession } from "@/lib/storage";
 import type { Character, ChatSession, Message } from "@/lib/types";
 
@@ -186,8 +186,10 @@ export default function ChatWindow({ character }: ChatWindowProps) {
       {sidebarOpen && (
         <div className="w-64 shrink-0">
           <SessionSidebar
-            sessions={sortedSessions}
-            activeSessionId={activeSessionId}
+            items={sortedSessions}
+            activeId={activeSessionId}
+            newLabel="New chat"
+            emptyLabel="No chats yet."
             onSelect={handleSelectSession}
             onNew={handleNewSession}
             onRename={handleRenameSession}

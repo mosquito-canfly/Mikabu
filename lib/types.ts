@@ -40,3 +40,21 @@ export interface QuizQuestion {
   options: string[];
   answerIndex: number;
 }
+
+export interface StudyResult {
+  id: string;
+  tool: StudyTool;              // "explain" | "quiz" | "summary"
+  text?: string;                // for explain and summary
+  questions?: QuizQuestion[];   // for quiz
+  createdAt: number;
+}
+
+export interface StudySession {
+  id: string;
+  characterId: string;
+  title: string;
+  notes: string;
+  results: StudyResult[];       // every result generated in this session
+  createdAt: number;
+  updatedAt: number;
+}
