@@ -61,3 +61,30 @@ export async function generateChatReply({
     throw new Error("Failed to generate a reply from the AI backend.");
   }
 }
+
+export interface GenerateStudyResponseParams {
+  prompt: string;
+}
+
+export async function generateStudyResponse({
+  prompt,
+}: GenerateStudyResponseParams): Promise<string> {
+  try {
+    const ai = getClient();
+
+    const response = await ai.models.generateContent({
+      model: MODEL,
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+    });
+
+    const text = response.text;
+    if (!text) {
+      throw new Error("empty response");
+    }
+
+    return text;
+  } catch (error) {
+    console.error("Gemini client error:", error);
+    throw new Error("Failed to generate a reply from the AI backend.");
+  }
+}

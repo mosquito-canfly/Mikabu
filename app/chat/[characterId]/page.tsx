@@ -43,6 +43,12 @@ export default function ChatPage() {
           ← Back
         </Link>
         <h1 className="text-lg font-semibold">{character.name}</h1>
+        <Link
+          href={`/study/${character.id}`}
+          className="ml-auto text-sm font-medium text-zinc-600 underline underline-offset-4 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+        >
+          Study
+        </Link>
       </header>
 
       <ChatWindow character={character} />
