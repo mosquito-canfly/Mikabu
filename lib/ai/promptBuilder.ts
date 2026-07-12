@@ -53,30 +53,40 @@ Rules you must always follow:
 - Always reply in the same language the user writes in. If they write in Japanese, reply in Japanese; if in English, reply in English; and so on for any other language. Stay fully in character as ${name} no matter which language you're replying in.`;
 }
 
-const STUDY_TASKS: Record<StudyTool, (notes: string) => string> = {
-  explain: (notes) => `Now switch to study mode. The user has pasted the following study notes:
+function buildMaterialsSection(notes: string, hasFiles: boolean): string {
+  const trimmedNotes = notes.trim();
+
+  if (hasFiles && trimmedNotes.length > 0) {
+    return `The student has attached one or more documents or images as the study material — read and use their contents directly as the source material. They've also included this as additional context or instructions:
 
 """
 ${notes}
-"""
+"""`;
+  }
 
-Explain these notes clearly and thoroughly, in your own voice, using your tone and personality as described above. Write in plain prose — no JSON, no markdown code fences. Make sure the explanation is easy to follow and actually helps the user understand the material.`,
+  if (hasFiles) {
+    return `The student has attached one or more documents or images as the study material — read and use their contents directly as the source material.`;
+  }
 
-  summary: (notes) => `Now switch to study mode. The user has pasted the following study notes:
-
-"""
-${notes}
-"""
-
-Produce a concise summary of these notes, written in your own voice using your tone and personality as described above. Write in plain prose — no JSON, no markdown code fences.`,
-
-  quiz: (notes) => `Now switch to study mode. The user has pasted the following study notes:
+  return `The user has pasted the following study notes:
 
 """
 ${notes}
-"""
+"""`;
+}
 
-Generate exactly 5 multiple-choice questions based ONLY on the information in these notes. Do not invent facts that aren't in the notes. The wording of the questions may carry your voice and personality, but the output itself MUST be raw JSON and nothing else — no markdown code fences, no preamble, no commentary before or after.
+const STUDY_TASKS: Record<StudyTool, (materials: string) => string> = {
+  explain: (materials) => `Now switch to study mode. ${materials}
+
+Explain this material clearly and thoroughly, in your own voice, using your tone and personality as described above. Write in plain prose — no JSON, no markdown code fences. Make sure the explanation is easy to follow and actually helps the user understand the material.`,
+
+  summary: (materials) => `Now switch to study mode. ${materials}
+
+Produce a concise summary of this material, written in your own voice using your tone and personality as described above. Write in plain prose — no JSON, no markdown code fences.`,
+
+  quiz: (materials) => `Now switch to study mode. ${materials}
+
+Generate exactly 5 multiple-choice questions based ONLY on the information in this material. Do not invent facts that aren't in it. The wording of the questions may carry your voice and personality, but the output itself MUST be raw JSON and nothing else — no markdown code fences, no preamble, no commentary before or after.
 
 Respond with exactly this JSON shape:
 { "questions": [ { "question": string, "options": string[4], "answerIndex": number } ] }
@@ -92,7 +102,9 @@ Where "answerIndex" is the 0-based index (0-3) of the correct option in "options
 export function buildStudyPrompt(
   character: Character,
   tool: StudyTool,
-  notes: string
+  notes: string,
+  hasFiles: boolean = false
 ): string {
-  return `${buildSystemPrompt(character)}\n\n${STUDY_TASKS[tool](notes)}`;
+  const materials = buildMaterialsSection(notes, hasFiles);
+  return `${buildSystemPrompt(character)}\n\n${STUDY_TASKS[tool](materials)}`;
 }

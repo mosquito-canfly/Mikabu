@@ -1,22 +1,41 @@
 import { NextResponse } from "next/server";
 import { buildStudyPrompt } from "@/lib/ai/promptBuilder";
 import { generateStudyResponse } from "@/lib/ai/client";
-import type { Character, QuizQuestion, StudyTool } from "@/lib/types";
+import type { Character, QuizQuestion, StudyFile, StudyTool } from "@/lib/types";
 
 // Reads process.env.GEMINI_API_KEY, so this route must run on the Node.js
 // runtime rather than the edge runtime.
 export const runtime = "nodejs";
 
+// Base64 file attachments inflate the request body; cap it generously above
+// what a few 10MB-per-file attachments would produce, but well below anything
+// that would strain the route handler.
+const MAX_REQUEST_BYTES = 40 * 1024 * 1024;
+
 interface StudyRequestBody {
   character?: Character;
   tool?: StudyTool;
   notes?: string;
+  files?: StudyFile[];
 }
 
 const STUDY_TOOLS: StudyTool[] = ["explain", "quiz", "summary"];
 
 function isValidTool(tool: unknown): tool is StudyTool {
   return typeof tool === "string" && STUDY_TOOLS.includes(tool as StudyTool);
+}
+
+function isValidFile(value: unknown): value is StudyFile {
+  if (typeof value !== "object" || value === null) return false;
+  const file = value as Record<string, unknown>;
+
+  return (
+    typeof file.id === "string" &&
+    typeof file.name === "string" &&
+    typeof file.mimeType === "string" &&
+    typeof file.size === "number" &&
+    (file.data === undefined || typeof file.data === "string")
+  );
 }
 
 function stripCodeFences(text: string): string {
@@ -41,6 +60,14 @@ function isValidQuizQuestion(value: unknown): value is QuizQuestion {
 }
 
 export async function POST(request: Request) {
+  const contentLength = request.headers.get("content-length");
+  if (contentLength && Number(contentLength) > MAX_REQUEST_BYTES) {
+    return NextResponse.json(
+      { error: "Attachments are too large. Try fewer or smaller files." },
+      { status: 400 }
+    );
+  }
+
   let body: StudyRequestBody;
 
   try {
@@ -52,25 +79,34 @@ export async function POST(request: Request) {
     );
   }
 
-  const { character, tool, notes } = body;
+  const { character, tool, notes, files } = body;
 
-  if (!character || !isValidTool(tool) || typeof notes !== "string") {
+  if (
+    !character ||
+    !isValidTool(tool) ||
+    typeof notes !== "string" ||
+    (files !== undefined && (!Array.isArray(files) || !files.every(isValidFile)))
+  ) {
     return NextResponse.json(
       { error: "'character', 'tool', and 'notes' are required." },
       { status: 400 }
     );
   }
 
-  if (notes.trim().length === 0) {
+  const filesWithData = (files ?? []).filter(
+    (file) => typeof file.data === "string" && file.data.length > 0
+  );
+
+  if (notes.trim().length === 0 && filesWithData.length === 0) {
     return NextResponse.json(
-      { error: "Notes cannot be empty." },
+      { error: "Add some notes or attach a file first." },
       { status: 400 }
     );
   }
 
   try {
-    const prompt = buildStudyPrompt(character, tool, notes);
-    const reply = await generateStudyResponse({ prompt });
+    const prompt = buildStudyPrompt(character, tool, notes, filesWithData.length > 0);
+    const reply = await generateStudyResponse({ prompt, files: filesWithData });
 
     if (tool === "quiz") {
       const cleaned = stripCodeFences(reply);

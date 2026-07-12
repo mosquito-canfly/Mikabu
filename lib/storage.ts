@@ -126,16 +126,30 @@ export function getStudySession(id: string): StudySession | undefined {
 export function saveStudySession(session: StudySession): void {
   if (typeof window === "undefined") return;
 
+  const sanitized: StudySession = {
+    ...session,
+    files: (session.files ?? []).map(({ id, name, mimeType, size }) => ({
+      id,
+      name,
+      mimeType,
+      size,
+    })),
+  };
+
   const sessions = getStudySessions();
-  const index = sessions.findIndex((s) => s.id === session.id);
+  const index = sessions.findIndex((s) => s.id === sanitized.id);
 
   if (index === -1) {
-    sessions.push(session);
+    sessions.push(sanitized);
   } else {
-    sessions[index] = session;
+    sessions[index] = sanitized;
   }
 
-  window.localStorage.setItem(STUDY_SESSIONS_KEY, JSON.stringify(sessions));
+  try {
+    window.localStorage.setItem(STUDY_SESSIONS_KEY, JSON.stringify(sessions));
+  } catch (error) {
+    console.warn("Failed to save study session (localStorage may be full):", error);
+  }
 }
 
 export function deleteStudySession(id: string): void {

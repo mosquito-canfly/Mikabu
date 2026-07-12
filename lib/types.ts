@@ -49,11 +49,20 @@ export interface StudyResult {
   createdAt: number;
 }
 
+export interface StudyFile {
+  id: string;
+  name: string;
+  mimeType: string;   // e.g. "application/pdf", "image/png"
+  size: number;       // bytes
+  data?: string;      // base64, NOT persisted — in-memory only
+}
+
 export interface StudySession {
   id: string;
   characterId: string;
   title: string;
   notes: string;
+  files: StudyFile[];            // persisted WITHOUT the `data` field (metadata only)
   results: StudyResult[];       // every result generated in this session
   createdAt: number;
   updatedAt: number;

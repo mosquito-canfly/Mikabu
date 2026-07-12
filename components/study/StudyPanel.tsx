@@ -13,13 +13,20 @@ import {
   nextStudyNumber,
   saveStudySession,
 } from "@/lib/storage";
-import type { Character, QuizQuestion, StudyResult, StudySession, StudyTool } from "@/lib/types";
+import type {
+  Character,
+  QuizQuestion,
+  StudyFile,
+  StudyResult,
+  StudySession,
+  StudyTool,
+} from "@/lib/types";
 
 interface StudyPanelProps {
   character: Character;
 }
 
-const NOTES_SAVE_DELAY = 500;
+const SAVE_DELAY = 500;
 
 const TOOL_LABELS: Record<StudyTool, string> = {
   explain: "Explain",
@@ -34,6 +41,7 @@ function createStudySession(characterId: string, title: string): StudySession {
     characterId,
     title,
     notes: "",
+    files: [],
     results: [],
     createdAt: now,
     updatedAt: now,
@@ -42,23 +50,26 @@ function createStudySession(characterId: string, title: string): StudySession {
 
 const NEW_STUDY_TITLE_PATTERN = /^New study \d+$/;
 
-function isStudyBlank(session: StudySession, liveNotes?: string): boolean {
+function isStudyBlank(session: StudySession, liveNotes?: string, liveFiles?: StudyFile[]): boolean {
   const notesToCheck = liveNotes ?? session.notes;
-  return notesToCheck.trim().length === 0 && session.results.length === 0;
+  const filesToCheck = liveFiles ?? session.files ?? [];
+  return notesToCheck.trim().length === 0 && session.results.length === 0 && filesToCheck.length === 0;
 }
 
-function isStudyUntouched(session: StudySession, liveNotes?: string): boolean {
-  return isStudyBlank(session, liveNotes) && NEW_STUDY_TITLE_PATTERN.test(session.title);
+function isStudyUntouched(session: StudySession, liveNotes?: string, liveFiles?: StudyFile[]): boolean {
+  return isStudyBlank(session, liveNotes, liveFiles) && NEW_STUDY_TITLE_PATTERN.test(session.title);
 }
 
 export default function StudyPanel({ character }: StudyPanelProps) {
   const [sessions, setSessions] = useState<StudySession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string>("");
   const [notes, setNotes] = useState("");
+  const [files, setFiles] = useState<StudyFile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const notesSaveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const filesSaveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const existingSessions = getStudySessionsForCharacter(character.id);
@@ -68,12 +79,14 @@ export default function StudyPanel({ character }: StudyPanelProps) {
       setSessions(existingSessions);
       setActiveSessionId(mostRecent.id);
       setNotes(mostRecent.notes);
+      setFiles(mostRecent.files ?? []);
     } else {
       const fresh = createStudySession(character.id, `New study ${nextStudyNumber(character.id)}`);
       saveStudySession(fresh);
       setSessions([fresh, ...existingSessions]);
       setActiveSessionId(fresh.id);
       setNotes(fresh.notes);
+      setFiles(fresh.files);
     }
 
     setError(null);
@@ -81,7 +94,9 @@ export default function StudyPanel({ character }: StudyPanelProps) {
 
   const activeSession = sessions.find((s) => s.id === activeSessionId);
   const sortedSessions = [...sessions].sort((a, b) => b.updatedAt - a.updatedAt);
-  const isNewSessionDisabled = activeSession ? isStudyUntouched(activeSession, notes) : false;
+  const isNewSessionDisabled = activeSession ? isStudyUntouched(activeSession, notes, files) : false;
+  const hasUsableContent = notes.trim().length > 0 || files.some((file) => Boolean(file.data));
+  const hasAttachedFiles = files.some((file) => Boolean(file.data));
 
   function persistNotes(sessionId: string, text: string) {
     setSessions((current) => {
@@ -96,13 +111,31 @@ export default function StudyPanel({ character }: StudyPanelProps) {
     });
   }
 
-  function flushNotesSave() {
+  function persistFiles(sessionId: string, attachments: StudyFile[]) {
+    setSessions((current) => {
+      const index = current.findIndex((s) => s.id === sessionId);
+      if (index === -1) return current;
+
+      const updated: StudySession = { ...current[index], files: attachments, updatedAt: Date.now() };
+      saveStudySession(updated);
+      const next = [...current];
+      next[index] = updated;
+      return next;
+    });
+  }
+
+  function flushPendingSaves() {
     if (notesSaveTimeout.current) {
       clearTimeout(notesSaveTimeout.current);
       notesSaveTimeout.current = null;
     }
+    if (filesSaveTimeout.current) {
+      clearTimeout(filesSaveTimeout.current);
+      filesSaveTimeout.current = null;
+    }
     if (activeSessionId) {
       persistNotes(activeSessionId, notes);
+      persistFiles(activeSessionId, files);
     }
   }
 
@@ -115,7 +148,19 @@ export default function StudyPanel({ character }: StudyPanelProps) {
     notesSaveTimeout.current = setTimeout(() => {
       notesSaveTimeout.current = null;
       persistNotes(sessionId, value);
-    }, NOTES_SAVE_DELAY);
+    }, SAVE_DELAY);
+  }
+
+  function handleFilesChange(newFiles: StudyFile[]) {
+    setFiles(newFiles);
+    if (filesSaveTimeout.current) {
+      clearTimeout(filesSaveTimeout.current);
+    }
+    const sessionId = activeSessionId;
+    filesSaveTimeout.current = setTimeout(() => {
+      filesSaveTimeout.current = null;
+      persistFiles(sessionId, newFiles);
+    }, SAVE_DELAY);
   }
 
   function appendResult(result: StudyResult) {
@@ -126,6 +171,7 @@ export default function StudyPanel({ character }: StudyPanelProps) {
       const updated: StudySession = {
         ...current[index],
         notes,
+        files,
         results: [...current[index].results, result],
         updatedAt: Date.now(),
       };
@@ -146,7 +192,7 @@ export default function StudyPanel({ character }: StudyPanelProps) {
       const response = await fetch("/api/study", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ character, tool, notes }),
+        body: JSON.stringify({ character, tool, notes, files }),
       });
 
       if (!response.ok) {
@@ -181,23 +227,25 @@ export default function StudyPanel({ character }: StudyPanelProps) {
   }
 
   function handleNewSession() {
-    if (activeSession && isStudyUntouched(activeSession, notes)) return;
+    if (activeSession && isStudyUntouched(activeSession, notes, files)) return;
 
-    flushNotesSave();
+    flushPendingSaves();
     const fresh = createStudySession(character.id, `New study ${nextStudyNumber(character.id)}`);
     saveStudySession(fresh);
     setSessions((current) => [fresh, ...current]);
     setActiveSessionId(fresh.id);
     setNotes(fresh.notes);
+    setFiles(fresh.files);
     setError(null);
   }
 
   function handleSelectSession(sessionId: string) {
     if (sessionId === activeSessionId) return;
-    flushNotesSave();
+    flushPendingSaves();
     const target = sessions.find((s) => s.id === sessionId);
     setActiveSessionId(sessionId);
     setNotes(target?.notes ?? "");
+    setFiles(target?.files ?? []);
     setError(null);
   }
 
@@ -223,18 +271,24 @@ export default function StudyPanel({ character }: StudyPanelProps) {
       clearTimeout(notesSaveTimeout.current);
       notesSaveTimeout.current = null;
     }
+    if (filesSaveTimeout.current) {
+      clearTimeout(filesSaveTimeout.current);
+      filesSaveTimeout.current = null;
+    }
 
     if (remaining.length > 0) {
       const mostRecent = [...remaining].sort((a, b) => b.updatedAt - a.updatedAt)[0];
       setSessions(remaining);
       setActiveSessionId(mostRecent.id);
       setNotes(mostRecent.notes);
+      setFiles(mostRecent.files ?? []);
     } else {
       const fresh = createStudySession(character.id, `New study ${nextStudyNumber(character.id)}`);
       saveStudySession(fresh);
       setSessions([fresh]);
       setActiveSessionId(fresh.id);
       setNotes(fresh.notes);
+      setFiles(fresh.files);
     }
 
     setError(null);
@@ -272,11 +326,19 @@ export default function StudyPanel({ character }: StudyPanelProps) {
 
         <div className="flex-1 overflow-y-auto px-4 py-8">
           <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
-            <NotesUpload value={notes} onChange={handleNotesChange} />
-            <StudyToolbar onSelect={handleSelectTool} disabled={isLoading} />
+            <NotesUpload
+              notes={notes}
+              onNotesChange={handleNotesChange}
+              files={files}
+              onFilesChange={handleFilesChange}
+            />
+            <StudyToolbar onSelect={handleSelectTool} disabled={isLoading || !hasUsableContent} />
 
             {isLoading && (
-              <p className="text-base text-muted">{character.name} is working on it...</p>
+              <p className="text-base text-muted">
+                {character.name} is working on it
+                {hasAttachedFiles ? " — reading your files may take a little longer" : ""}...
+              </p>
             )}
 
             {error && (

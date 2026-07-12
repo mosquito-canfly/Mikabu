@@ -21,7 +21,9 @@ Next.js (App Router) · React · TypeScript · Tailwind CSS
 
 ## Locked decisions (v1)
 - Persistence: localStorage only. Database + auth come later.
-- Study notes: paste text only. PDF upload comes later.
+- Study material: pasted notes and/or attached PDF/image files, sent natively to
+  the model. File contents are in-memory only — localStorage holds file metadata,
+  not bytes.
 - Conversation memory: ON. Full session history is sent each turn.
 - AI backend: Gemini free tier for the prototype.
 
@@ -89,3 +91,5 @@ not corporate, not childish.
 - [x] Step 8: Bug fixes (sidebar dropdown, markdown rendering)
 - [x] Step 9: Study sessions with history sidebar
 - [x] Step 10: Behavior fixes (fresh chat on open, empty state, required markers, back button)
+- [x] Step 11: Visual design pass (palette, Fredoka, mode theming)
+- [x] Step 12: File upload in study mode (PDF and images)

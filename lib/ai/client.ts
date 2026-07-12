@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
+import type { StudyFile } from "@/lib/types";
 
 // This file is the ONLY place allowed to import the provider SDK. Feature
 // code must call generateChatReply() below instead of touching @google/genai
@@ -64,17 +65,28 @@ export async function generateChatReply({
 
 export interface GenerateStudyResponseParams {
   prompt: string;
+  files?: StudyFile[];
 }
 
 export async function generateStudyResponse({
   prompt,
+  files,
 }: GenerateStudyResponseParams): Promise<string> {
   try {
     const ai = getClient();
 
+    const fileParts = (files ?? [])
+      .filter((file) => typeof file.data === "string" && file.data.length > 0)
+      .map((file) => ({
+        inlineData: {
+          mimeType: file.mimeType,
+          data: file.data as string,
+        },
+      }));
+
     const response = await ai.models.generateContent({
       model: MODEL,
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      contents: [{ role: "user", parts: [{ text: prompt }, ...fileParts] }],
     });
 
     const text = response.text;
