@@ -32,6 +32,14 @@ function truncateTitle(text: string): string {
   return `${trimmed.slice(0, AUTO_TITLE_LENGTH).trimEnd()}…`;
 }
 
+function isBlank(session: ChatSession): boolean {
+  return session.messages.length === 0;
+}
+
+function isUntouched(session: ChatSession): boolean {
+  return isBlank(session) && session.title === NEW_CHAT_TITLE;
+}
+
 export default function ChatWindow({ character }: ChatWindowProps) {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string>("");
@@ -42,14 +50,16 @@ export default function ChatWindow({ character }: ChatWindowProps) {
 
   useEffect(() => {
     const existingSessions = getSessionsForCharacter(character.id);
+    const mostRecent = existingSessions[0];
 
-    if (existingSessions.length === 0) {
-      const fresh = createSession(character.id);
-      setSessions([fresh]);
-      setActiveSessionId(fresh.id);
-    } else {
+    if (mostRecent && isUntouched(mostRecent)) {
       setSessions(existingSessions);
-      setActiveSessionId(existingSessions[0].id);
+      setActiveSessionId(mostRecent.id);
+    } else {
+      const fresh = createSession(character.id);
+      saveSession(fresh);
+      setSessions([fresh, ...existingSessions]);
+      setActiveSessionId(fresh.id);
     }
 
     setError(null);
@@ -58,6 +68,7 @@ export default function ChatWindow({ character }: ChatWindowProps) {
   const activeSession = sessions.find((s) => s.id === activeSessionId);
   const messages = activeSession?.messages ?? [];
   const sortedSessions = [...sessions].sort((a, b) => b.updatedAt - a.updatedAt);
+  const isNewSessionDisabled = activeSession ? isUntouched(activeSession) : false;
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -137,6 +148,8 @@ export default function ChatWindow({ character }: ChatWindowProps) {
   }
 
   function handleNewSession() {
+    if (activeSession && isUntouched(activeSession)) return;
+
     const fresh = createSession(character.id);
     saveSession(fresh);
     setSessions((current) => [fresh, ...current]);
@@ -190,6 +203,7 @@ export default function ChatWindow({ character }: ChatWindowProps) {
             activeId={activeSessionId}
             newLabel="New chat"
             emptyLabel="No chats yet."
+            newDisabled={isNewSessionDisabled}
             onSelect={handleSelectSession}
             onNew={handleNewSession}
             onRename={handleRenameSession}

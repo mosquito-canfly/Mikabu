@@ -40,6 +40,17 @@ function createStudySession(characterId: string, title: string): StudySession {
   };
 }
 
+const NEW_STUDY_TITLE_PATTERN = /^New study \d+$/;
+
+function isStudyBlank(session: StudySession, liveNotes?: string): boolean {
+  const notesToCheck = liveNotes ?? session.notes;
+  return notesToCheck.trim().length === 0 && session.results.length === 0;
+}
+
+function isStudyUntouched(session: StudySession, liveNotes?: string): boolean {
+  return isStudyBlank(session, liveNotes) && NEW_STUDY_TITLE_PATTERN.test(session.title);
+}
+
 export default function StudyPanel({ character }: StudyPanelProps) {
   const [sessions, setSessions] = useState<StudySession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string>("");
@@ -51,17 +62,18 @@ export default function StudyPanel({ character }: StudyPanelProps) {
 
   useEffect(() => {
     const existingSessions = getStudySessionsForCharacter(character.id);
+    const mostRecent = existingSessions[0];
 
-    if (existingSessions.length === 0) {
+    if (mostRecent && isStudyUntouched(mostRecent)) {
+      setSessions(existingSessions);
+      setActiveSessionId(mostRecent.id);
+      setNotes(mostRecent.notes);
+    } else {
       const fresh = createStudySession(character.id, `New study ${nextStudyNumber(character.id)}`);
       saveStudySession(fresh);
-      setSessions([fresh]);
+      setSessions([fresh, ...existingSessions]);
       setActiveSessionId(fresh.id);
       setNotes(fresh.notes);
-    } else {
-      setSessions(existingSessions);
-      setActiveSessionId(existingSessions[0].id);
-      setNotes(existingSessions[0].notes);
     }
 
     setError(null);
@@ -69,6 +81,7 @@ export default function StudyPanel({ character }: StudyPanelProps) {
 
   const activeSession = sessions.find((s) => s.id === activeSessionId);
   const sortedSessions = [...sessions].sort((a, b) => b.updatedAt - a.updatedAt);
+  const isNewSessionDisabled = activeSession ? isStudyUntouched(activeSession, notes) : false;
 
   function persistNotes(sessionId: string, text: string) {
     setSessions((current) => {
@@ -168,6 +181,8 @@ export default function StudyPanel({ character }: StudyPanelProps) {
   }
 
   function handleNewSession() {
+    if (activeSession && isStudyUntouched(activeSession, notes)) return;
+
     flushNotesSave();
     const fresh = createStudySession(character.id, `New study ${nextStudyNumber(character.id)}`);
     saveStudySession(fresh);
@@ -234,6 +249,7 @@ export default function StudyPanel({ character }: StudyPanelProps) {
             activeId={activeSessionId}
             newLabel="New study"
             emptyLabel="No study sessions yet."
+            newDisabled={isNewSessionDisabled}
             onSelect={handleSelectSession}
             onNew={handleNewSession}
             onRename={handleRenameSession}

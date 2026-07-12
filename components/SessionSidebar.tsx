@@ -12,6 +12,7 @@ interface SessionSidebarProps {
   activeId: string;
   newLabel: string;
   emptyLabel: string;
+  newDisabled?: boolean;
   onSelect: (id: string) => void;
   onNew: () => void;
   onRename: (id: string, newTitle: string) => void;
@@ -23,6 +24,7 @@ export default function SessionSidebar({
   activeId,
   newLabel,
   emptyLabel,
+  newDisabled = false,
   onSelect,
   onNew,
   onRename,
@@ -38,7 +40,8 @@ export default function SessionSidebar({
         <button
           type="button"
           onClick={onNew}
-          className="w-full rounded-md bg-zinc-900 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+          disabled={newDisabled}
+          className="w-full rounded-md bg-zinc-900 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:bg-zinc-300 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300 dark:disabled:bg-zinc-700"
         >
           + {newLabel}
         </button>

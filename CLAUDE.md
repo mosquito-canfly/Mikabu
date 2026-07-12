@@ -46,3 +46,4 @@ get an explanation and a quiz. Nothing beyond this until v1 works.
 - [x] Step 7: Multi-session chat history with sidebar
 - [x] Step 8: Bug fixes (sidebar dropdown, markdown rendering)
 - [x] Step 9: Study sessions with history sidebar
+- [x] Step 10: Behavior fixes (fresh chat on open, empty state, required markers, back button)

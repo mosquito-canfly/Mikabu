@@ -62,6 +62,14 @@ interface ChipProps {
   onClick: () => void;
 }
 
+function RequiredMark() {
+  return (
+    <span className="text-red-500" aria-hidden="true">
+      *
+    </span>
+  );
+}
+
 function Chip({ label, selected, onClick }: ChipProps) {
   return (
     <button
@@ -155,7 +163,7 @@ export default function CharacterForm({ onSubmit }: CharacterFormProps) {
       {/* Name */}
       <div className="flex flex-col gap-2">
         <label htmlFor="name" className="text-lg font-semibold">
-          Name
+          Name <RequiredMark />
         </label>
         <input
           id="name"
@@ -169,7 +177,9 @@ export default function CharacterForm({ onSubmit }: CharacterFormProps) {
 
       {/* Gender */}
       <div className="flex flex-col gap-2">
-        <label className="text-lg font-semibold">Gender</label>
+        <label className="text-lg font-semibold">
+          Gender <RequiredMark />
+        </label>
         <div className="flex flex-wrap gap-2">
           {GENDER_OPTIONS.map((option) => (
             <Chip
@@ -194,7 +204,7 @@ export default function CharacterForm({ onSubmit }: CharacterFormProps) {
       {/* Age */}
       <div className="flex flex-col gap-2">
         <label htmlFor="age" className="text-lg font-semibold">
-          Age
+          Age <RequiredMark />
         </label>
         <input
           id="age"
@@ -210,7 +220,9 @@ export default function CharacterForm({ onSubmit }: CharacterFormProps) {
 
       {/* Personality */}
       <div className="flex flex-col gap-2">
-        <label className="text-lg font-semibold">Personality</label>
+        <label className="text-lg font-semibold">
+          Personality <RequiredMark />
+        </label>
         <div className="flex flex-wrap gap-2">
           {PERSONALITY_OPTIONS.map((option) => (
             <Chip
@@ -240,7 +252,7 @@ export default function CharacterForm({ onSubmit }: CharacterFormProps) {
       {/* Occupation */}
       <div className="flex flex-col gap-2">
         <label htmlFor="occupation" className="text-lg font-semibold">
-          Occupation
+          Occupation <RequiredMark />
         </label>
         <input
           id="occupation"
@@ -255,7 +267,7 @@ export default function CharacterForm({ onSubmit }: CharacterFormProps) {
       {/* Relationship */}
       <div className="flex flex-col gap-2">
         <label htmlFor="relationship" className="text-lg font-semibold">
-          Relationship
+          Relationship <RequiredMark />
         </label>
         <p className="text-xs text-zinc-500 dark:text-zinc-400">
           Who is this character to you?
@@ -273,7 +285,7 @@ export default function CharacterForm({ onSubmit }: CharacterFormProps) {
       {/* Setting World */}
       <div className="flex flex-col gap-2">
         <label htmlFor="setting" className="text-lg font-semibold">
-          Setting World
+          Setting World <RequiredMark />
         </label>
         <p className="text-xs text-zinc-500 dark:text-zinc-400">
           Where does the character usually live in?
@@ -290,7 +302,9 @@ export default function CharacterForm({ onSubmit }: CharacterFormProps) {
 
       {/* Speaking Style */}
       <div className="flex flex-col gap-2">
-        <label className="text-lg font-semibold">Speaking Style</label>
+        <label className="text-lg font-semibold">
+          Speaking Style <RequiredMark />
+        </label>
         <div className="flex flex-wrap gap-2">
           {SPEAKING_STYLE_OPTIONS.map((option) => (
             <Chip
