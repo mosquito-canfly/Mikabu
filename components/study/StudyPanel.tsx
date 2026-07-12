@@ -6,6 +6,7 @@ import NotesUpload from "@/components/study/NotesUpload";
 import StudyToolbar from "@/components/study/StudyToolbar";
 import QuizView from "@/components/study/QuizView";
 import SessionSidebar from "@/components/SessionSidebar";
+import LoadingBar from "@/components/LoadingBar";
 import { markdownComponents } from "@/components/MarkdownContent";
 import {
   deleteStudySession,
@@ -333,6 +334,7 @@ export default function StudyPanel({ character }: StudyPanelProps) {
               onFilesChange={handleFilesChange}
             />
             <StudyToolbar onSelect={handleSelectTool} disabled={isLoading || !hasUsableContent} />
+            <LoadingBar active={isLoading} accent="sky" />
 
             {isLoading && (
               <p className="text-base text-muted">

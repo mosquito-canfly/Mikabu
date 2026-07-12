@@ -43,3 +43,42 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+.mikabu-loading-track {
+  position: relative;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 9999px;
+  background-color: var(--line);
+}
+
+.mikabu-loading-segment {
+  position: absolute;
+  top: 0;
+  left: -40%;
+  height: 100%;
+  width: 40%;
+  border-radius: 9999px;
+  animation: mikabu-loading-sweep 1.2s ease-in-out infinite;
+}
+
+@keyframes mikabu-loading-sweep {
+  0% {
+    left: -40%;
+  }
+  50% {
+    left: 60%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mikabu-loading-segment {
+    animation: none;
+    left: 0;
+    width: 100%;
+    opacity: 0.6;
+  }
+}

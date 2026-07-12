@@ -93,3 +93,4 @@ not corporate, not childish.
 - [x] Step 10: Behavior fixes (fresh chat on open, empty state, required markers, back button)
 - [x] Step 11: Visual design pass (palette, Fredoka, mode theming)
 - [x] Step 12: File upload in study mode (PDF and images)
+- [x] Step 13: Mode-tinted loading bar

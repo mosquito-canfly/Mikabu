@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import MessageBubble from "@/components/chat/MessageBubble";
 import ChatInput from "@/components/chat/ChatInput";
 import SessionSidebar from "@/components/SessionSidebar";
+import LoadingBar from "@/components/LoadingBar";
 import { deleteSession, getSessionsForCharacter, saveSession } from "@/lib/storage";
 import type { Character, ChatSession, Message } from "@/lib/types";
 
@@ -256,7 +257,8 @@ export default function ChatWindow({ character }: ChatWindowProps) {
           </div>
         </div>
 
-        <div className="mx-auto w-full max-w-2xl">
+        <div className="mx-auto flex w-full max-w-2xl flex-col gap-2">
+          <LoadingBar active={isLoading} accent="star" />
           <ChatInput onSend={handleSend} disabled={isLoading} />
         </div>
       </div>
