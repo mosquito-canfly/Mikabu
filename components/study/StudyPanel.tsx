@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import Markdown from "react-markdown";
 import NotesUpload from "@/components/study/NotesUpload";
 import StudyToolbar from "@/components/study/StudyToolbar";
 import QuizView from "@/components/study/QuizView";
+import { markdownComponents } from "@/components/MarkdownContent";
 import type { Character, QuizQuestion, StudyTool } from "@/lib/types";
 
 interface StudyPanelProps {
@@ -71,7 +73,9 @@ export default function StudyPanel({ character }: StudyPanelProps) {
       )}
 
       {result?.type === "text" && (
-        <p className="whitespace-pre-wrap text-sm leading-relaxed">{result.text}</p>
+        <div className="break-words text-sm leading-relaxed">
+          <Markdown components={markdownComponents}>{result.text}</Markdown>
+        </div>
       )}
 
       {result?.type === "quiz" && <QuizView questions={result.questions} />}

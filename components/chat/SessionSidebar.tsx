@@ -22,6 +22,7 @@ export default function SessionSidebar({
 }: SessionSidebarProps) {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col border-r border-zinc-200 dark:border-zinc-800">
@@ -35,7 +36,7 @@ export default function SessionSidebar({
         </button>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-3">
+      <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto px-2 pb-3">
         {sessions.length === 0 ? (
           <p className="px-2 py-4 text-center text-sm text-zinc-500 dark:text-zinc-400">
             No chats yet.
@@ -49,6 +50,7 @@ export default function SessionSidebar({
                 isActive={session.id === activeSessionId}
                 isMenuOpen={openMenuId === session.id}
                 isEditing={editingId === session.id}
+                containerRef={listRef}
                 onSelect={() => onSelect(session.id)}
                 onOpenMenu={() => setOpenMenuId(session.id)}
                 onCloseMenu={() =>
@@ -86,6 +88,7 @@ interface SessionRowProps {
   isActive: boolean;
   isMenuOpen: boolean;
   isEditing: boolean;
+  containerRef: React.RefObject<HTMLDivElement | null>;
   onSelect: () => void;
   onOpenMenu: () => void;
   onCloseMenu: () => void;
@@ -95,11 +98,14 @@ interface SessionRowProps {
   onDelete: () => void;
 }
 
+const ESTIMATED_MENU_HEIGHT = 84;
+
 function SessionRow({
   session,
   isActive,
   isMenuOpen,
   isEditing,
+  containerRef,
   onSelect,
   onOpenMenu,
   onCloseMenu,
@@ -109,8 +115,10 @@ function SessionRow({
   onDelete,
 }: SessionRowProps) {
   const menuRef = useRef<HTMLDivElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [editValue, setEditValue] = useState(session.title);
+  const [openUpward, setOpenUpward] = useState(false);
 
   useEffect(() => {
     if (isEditing) {
@@ -142,13 +150,18 @@ function SessionRow({
     e.stopPropagation();
     if (isMenuOpen) {
       onCloseMenu();
-    } else {
-      onOpenMenu();
+      return;
     }
+
+    const buttonRect = menuButtonRef.current?.getBoundingClientRect();
+    const containerRect = containerRef.current?.getBoundingClientRect();
+    const spaceBelow = buttonRect && containerRect ? containerRect.bottom - buttonRect.bottom : 0;
+    setOpenUpward(spaceBelow < ESTIMATED_MENU_HEIGHT);
+    onOpenMenu();
   }
 
   return (
-    <li className="group relative">
+    <li className={`group relative ${isMenuOpen ? "z-20" : "z-0"}`}>
       {isEditing ? (
         <input
           ref={inputRef}
@@ -183,6 +196,7 @@ function SessionRow({
       {!isEditing && (
         <div ref={menuRef} className="absolute right-1 top-1/2 -translate-y-1/2">
           <button
+            ref={menuButtonRef}
             type="button"
             onClick={handleMenuToggle}
             aria-label="Session options"
@@ -200,7 +214,9 @@ function SessionRow({
           {isMenuOpen && (
             <div
               onClick={(e) => e.stopPropagation()}
-              className="absolute right-0 top-full z-10 mt-1 w-36 overflow-hidden rounded-md border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
+              className={`absolute right-0 z-30 w-36 overflow-hidden rounded-md border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900 ${
+                openUpward ? "bottom-full mb-1" : "top-full mt-1"
+              }`}
             >
               <button
                 type="button"
