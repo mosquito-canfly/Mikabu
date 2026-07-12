@@ -24,6 +24,15 @@ export interface Message {
   timestamp: number;
 }
 
+export interface ChatSession {
+  id: string;
+  characterId: string;
+  title: string;
+  messages: Message[];
+  createdAt: number;
+  updatedAt: number;
+}
+
 export type StudyTool = 'explain' | 'quiz' | 'summary';
 
 export interface QuizQuestion {

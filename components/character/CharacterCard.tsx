@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Character } from "@/lib/types";
 
@@ -30,10 +29,6 @@ export default function CharacterCard({ character, onDelete }: CharacterCardProp
     }
   }
 
-  function handleStudyClick(e: React.MouseEvent) {
-    e.stopPropagation();
-  }
-
   function handleDelete(e: React.MouseEvent) {
     e.stopPropagation();
     onDelete(character.id);
@@ -59,22 +54,13 @@ export default function CharacterCard({ character, onDelete }: CharacterCardProp
         </p>
       )}
 
-      <div className="absolute right-3 top-3 flex items-center gap-1">
-        <Link
-          href={`/study/${character.id}`}
-          onClick={handleStudyClick}
-          className="rounded-md px-2 py-1 text-xs font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-        >
-          Study
-        </Link>
-        <button
-          type="button"
-          onClick={handleDelete}
-          className="rounded-md px-2 py-1 text-xs font-medium text-zinc-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 dark:hover:text-red-400"
-        >
-          Delete
-        </button>
-      </div>
+      <button
+        type="button"
+        onClick={handleDelete}
+        className="absolute right-3 top-3 rounded-md px-2 py-1 text-xs font-medium text-zinc-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 dark:hover:text-red-400"
+      >
+        Delete
+      </button>
     </div>
   );
 }

@@ -1,33 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import Link from "next/link";
+import { useState } from "react";
 import NotesUpload from "@/components/study/NotesUpload";
 import StudyToolbar from "@/components/study/StudyToolbar";
 import QuizView from "@/components/study/QuizView";
-import { getCharacter } from "@/lib/storage";
 import type { Character, QuizQuestion, StudyTool } from "@/lib/types";
+
+interface StudyPanelProps {
+  character: Character;
+}
 
 type StudyResult =
   | { type: "text"; text: string }
   | { type: "quiz"; questions: QuizQuestion[] };
 
-export default function StudyPage() {
-  const params = useParams<{ characterId: string }>();
-  const [character, setCharacter] = useState<Character | null | undefined>(undefined);
+export default function StudyPanel({ character }: StudyPanelProps) {
   const [notes, setNotes] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<StudyResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    setCharacter(getCharacter(params.characterId) ?? null);
-  }, [params.characterId]);
-
   async function handleSelectTool(tool: StudyTool) {
-    if (!character) return;
-
     setIsLoading(true);
     setError(null);
     setResult(null);
@@ -60,36 +53,8 @@ export default function StudyPage() {
     }
   }
 
-  if (character === undefined) {
-    return null;
-  }
-
-  if (character === null) {
-    return (
-      <main className="flex min-h-screen flex-col items-center justify-center gap-3 px-4 text-center">
-        <h1 className="text-3xl font-semibold">Character not found</h1>
-        <Link
-          href="/"
-          className="text-sm font-medium text-zinc-600 underline underline-offset-4 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-        >
-          Back home
-        </Link>
-      </main>
-    );
-  }
-
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col gap-6 px-4 py-8">
-      <header className="flex items-center gap-3 border-b border-zinc-200 pb-3 dark:border-zinc-800">
-        <Link
-          href="/"
-          className="text-sm font-medium text-zinc-600 underline underline-offset-4 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-        >
-          ← Back
-        </Link>
-        <h1 className="text-lg font-semibold">Study with {character.name}</h1>
-      </header>
-
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-8">
       <NotesUpload value={notes} onChange={setNotes} />
       <StudyToolbar onSelect={handleSelectTool} disabled={isLoading} />
 
@@ -110,6 +75,6 @@ export default function StudyPage() {
       )}
 
       {result?.type === "quiz" && <QuizView questions={result.questions} />}
-    </main>
+    </div>
   );
 }

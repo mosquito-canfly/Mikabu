@@ -41,4 +41,6 @@ get an explanation and a quiz. Nothing beyond this until v1 works.
 - [x] Step 4a: AI backend wiring (prompt builder, Gemini client, chat API)
 - [x] Step 4b: Chat mode UI with memory
 - [x] Step 5: Study mode (explain + quiz)
-- [ ] Step 6: Mode toggle + polish
+- [x] Step 6a: Mode toggle and unified character page
+- [x] Step 6b: Persist chat history
+- [ ] Step 7: Multi-session chat history with sidebar

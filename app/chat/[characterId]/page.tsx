@@ -4,12 +4,15 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import ChatWindow from "@/components/chat/ChatWindow";
+import StudyPanel from "@/components/study/StudyPanel";
+import ModeToggle, { type Mode } from "@/components/ModeToggle";
 import { getCharacter } from "@/lib/storage";
 import type { Character } from "@/lib/types";
 
-export default function ChatPage() {
+export default function CharacterPage() {
   const params = useParams<{ characterId: string }>();
   const [character, setCharacter] = useState<Character | null | undefined>(undefined);
+  const [mode, setMode] = useState<Mode>("chat");
 
   useEffect(() => {
     setCharacter(getCharacter(params.characterId) ?? null);
@@ -43,15 +46,19 @@ export default function ChatPage() {
           ← Back
         </Link>
         <h1 className="text-lg font-semibold">{character.name}</h1>
-        <Link
-          href={`/study/${character.id}`}
-          className="ml-auto text-sm font-medium text-zinc-600 underline underline-offset-4 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-        >
-          Study
-        </Link>
+        <div className="ml-auto">
+          <ModeToggle mode={mode} onChange={setMode} />
+        </div>
       </header>
 
-      <ChatWindow character={character} />
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className={mode === "chat" ? "flex h-full min-h-0 flex-1 flex-col" : "hidden"}>
+          <ChatWindow character={character} />
+        </div>
+        <div className={mode === "study" ? "h-full flex-1 overflow-y-auto" : "hidden"}>
+          <StudyPanel character={character} />
+        </div>
+      </div>
     </main>
   );
 }
