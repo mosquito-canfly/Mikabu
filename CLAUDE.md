@@ -43,4 +43,4 @@ get an explanation and a quiz. Nothing beyond this until v1 works.
 - [x] Step 5: Study mode (explain + quiz)
 - [x] Step 6a: Mode toggle and unified character page
 - [x] Step 6b: Persist chat history
-- [ ] Step 7: Multi-session chat history with sidebar
+- [x] Step 7: Multi-session chat history with sidebar

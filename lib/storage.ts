@@ -58,7 +58,9 @@ export function getSessions(): ChatSession[] {
 }
 
 export function getSessionsForCharacter(characterId: string): ChatSession[] {
-  return getSessions().filter((session) => session.characterId === characterId);
+  return getSessions()
+    .filter((session) => session.characterId === characterId)
+    .sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
 export function getSession(id: string): ChatSession | undefined {
