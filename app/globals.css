@@ -16,13 +16,13 @@
   --color-ink: var(--ink);
   --color-muted: var(--muted);
   --color-line: var(--line);
-  --font-sans: var(--font-fredoka);
+  --font-sans: var(--font-fredoka), "Segoe UI Emoji", "Segoe UI Symbol", "Noto Sans Symbols 2", "Apple Color Emoji", -apple-system, "Segoe UI", sans-serif;
 }
 
 body {
   background: var(--paper);
   color: var(--ink);
-  font-family: var(--font-fredoka), sans-serif;
+  font-family: var(--font-sans);
   font-weight: 400;
   line-height: 1.5;
 }

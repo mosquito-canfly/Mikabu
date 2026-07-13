@@ -11,16 +11,16 @@ import { deleteCharacter, getCharacters } from "@/lib/storage";
 import type { Character } from "@/lib/types";
 
 const BANNER_DISMISSED_KEY = "mikabu-signin-banner-dismissed";
-const EMAIL_TRUNCATE_LENGTH = 24;
+const NAME_TRUNCATE_LENGTH = 24;
 
-function truncateEmail(email: string): string {
-  if (email.length <= EMAIL_TRUNCATE_LENGTH) return email;
-  return `${email.slice(0, EMAIL_TRUNCATE_LENGTH)}…`;
+function truncateName(name: string): string {
+  if (name.length <= NAME_TRUNCATE_LENGTH) return name;
+  return `${name.slice(0, NAME_TRUNCATE_LENGTH)}…`;
 }
 
 export default function Home() {
   const router = useRouter();
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, username, isLoading: authLoading } = useAuth();
   const [characters, setCharacters] = useState<Character[]>([]);
   const [bannerDismissed, setBannerDismissed] = useState(true);
 
@@ -50,6 +50,8 @@ export default function Home() {
   }
 
   const showBanner = !authLoading && !user && !bannerDismissed;
+  const emailPrefix = user?.email ? user.email.split("@")[0] : "";
+  const displayName = username ?? emailPrefix;
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-10 px-4 py-16">
@@ -65,13 +67,16 @@ export default function Home() {
             <>
               {user ? (
                 <div className="flex items-center gap-3">
-                  <span className="text-base text-muted" title={user.email ?? ""}>
-                    {truncateEmail(user.email ?? "")}
+                  <span
+                    className="min-w-0 max-w-[240px] truncate text-base text-muted"
+                    title={displayName}
+                  >
+                    Hi {truncateName(displayName)}! (ﾉ≧∀≦)ﾉ
                   </span>
                   <button
                     type="button"
                     onClick={handleLogout}
-                    className="rounded-full border-2 border-line px-5 py-2.5 text-base font-medium text-ink transition-colors hover:bg-line/40"
+                    className="shrink-0 rounded-full border-2 border-line px-5 py-2.5 text-base font-medium text-ink transition-colors hover:bg-line/40"
                   >
                     Log out
                   </button>

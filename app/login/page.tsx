@@ -60,7 +60,7 @@ export default function LoginPage() {
       >
         <div className="flex flex-col gap-1">
           <h2 className="text-2xl font-bold text-ink">Log in</h2>
-          <p className="text-base text-muted">Welcome back to Mikabu.</p>
+          <p className="text-base text-muted">Welcome back to Mikabu! (๑&gt;ᴗ&lt;๑)</p>
         </div>
 
         <div className="flex flex-col gap-2">
