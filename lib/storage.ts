@@ -444,3 +444,149 @@ export async function nextStudyNumber(characterId: string): Promise<number> {
   const userId = await getCurrentUserId();
   return userId ? nextStudyNumberDb(userId, characterId) : nextStudyNumberLocal(characterId);
 }
+
+// ---------------------------------------------------------------------------
+// Local-to-account import (Step 15c) — one-time migration of the data a user
+// built up while logged out into their account once they sign in.
+// ---------------------------------------------------------------------------
+
+export interface LocalDataSnapshot {
+  characters: Character[];
+  sessions: ChatSession[];
+  studySessions: StudySession[];
+  studyCounters: Record<string, number>;
+}
+
+export interface ImportProgress {
+  completed: number;
+  total: number;
+  label: string;
+}
+
+export interface ImportResult {
+  success: boolean;
+  importedCharacters: number;
+  importedChatSessions: number;
+  importedStudySessions: number;
+  failedItems: string[];
+}
+
+export function getLocalDataSnapshot(): LocalDataSnapshot {
+  return {
+    characters: getCharactersLocal(),
+    sessions: getSessionsLocal(),
+    studySessions: getStudySessionsLocal(),
+    studyCounters: getStudyCountersLocal(),
+  };
+}
+
+export async function importLocalDataForUser(
+  onProgress?: (progress: ImportProgress) => void
+): Promise<ImportResult> {
+  const userId = await getCurrentUserId();
+  if (!userId) {
+    return {
+      success: false,
+      importedCharacters: 0,
+      importedChatSessions: 0,
+      importedStudySessions: 0,
+      failedItems: ["You need to be signed in to import."],
+    };
+  }
+
+  const snapshot = getLocalDataSnapshot();
+  const total = snapshot.characters.length + snapshot.sessions.length + snapshot.studySessions.length;
+  let completed = 0;
+  const failedItems: string[] = [];
+  let importedCharacters = 0;
+  let importedChatSessions = 0;
+  let importedStudySessions = 0;
+
+  function reportProgress(label: string) {
+    completed += 1;
+    onProgress?.({ completed, total, label });
+  }
+
+  for (const character of snapshot.characters) {
+    try {
+      const studyCounter = snapshot.studyCounters[character.id];
+      const payload: CharacterWithCounter =
+        studyCounter !== undefined ? { ...character, studyCounter } : character;
+      await dbUpsert("characters", { id: character.id, user_id: userId, data: payload });
+      importedCharacters += 1;
+    } catch {
+      failedItems.push(`Character "${character.name}"`);
+    }
+    reportProgress(character.name);
+  }
+
+  for (const session of snapshot.sessions) {
+    try {
+      await dbUpsert("chat_sessions", {
+        id: session.id,
+        user_id: userId,
+        character_id: session.characterId,
+        data: session,
+      });
+      importedChatSessions += 1;
+    } catch {
+      failedItems.push(`Chat "${session.title}"`);
+    }
+    reportProgress(session.title);
+  }
+
+  for (const session of snapshot.studySessions) {
+    try {
+      const sanitized = sanitizeStudySession(session);
+      await dbUpsert("study_sessions", {
+        id: sanitized.id,
+        user_id: userId,
+        character_id: sanitized.characterId,
+        data: sanitized,
+      });
+      importedStudySessions += 1;
+    } catch {
+      failedItems.push(`Study session "${session.title}"`);
+    }
+    reportProgress(session.title);
+  }
+
+  return {
+    success: failedItems.length === 0,
+    importedCharacters,
+    importedChatSessions,
+    importedStudySessions,
+    failedItems,
+  };
+}
+
+export function clearLocalData(): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(CHARACTERS_KEY);
+  window.localStorage.removeItem(SESSIONS_KEY);
+  window.localStorage.removeItem(STUDY_SESSIONS_KEY);
+  window.localStorage.removeItem(STUDY_COUNTERS_KEY);
+}
+
+const IMPORTED_FLAG_PREFIX = "mikabu:imported:";
+const IMPORT_DISMISSED_PREFIX = "mikabu:importDismissed:";
+
+export function hasImportedForUser(userId: string): boolean {
+  if (typeof window === "undefined") return false;
+  return window.localStorage.getItem(`${IMPORTED_FLAG_PREFIX}${userId}`) === "true";
+}
+
+export function markImportedForUser(userId: string): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(`${IMPORTED_FLAG_PREFIX}${userId}`, "true");
+}
+
+export function hasDismissedImportThisSession(userId: string): boolean {
+  if (typeof window === "undefined") return false;
+  return window.sessionStorage.getItem(`${IMPORT_DISMISSED_PREFIX}${userId}`) === "true";
+}
+
+export function dismissImportThisSession(userId: string): void {
+  if (typeof window === "undefined") return;
+  window.sessionStorage.setItem(`${IMPORT_DISMISSED_PREFIX}${userId}`, "true");
+}

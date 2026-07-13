@@ -6,9 +6,16 @@ import Link from "next/link";
 import Logo from "@/components/Logo";
 import CharacterCard from "@/components/character/CharacterCard";
 import LoadingBar from "@/components/LoadingBar";
+import ImportLocalDataDialog from "@/components/ImportLocalDataDialog";
 import { useAuth } from "@/components/AuthProvider";
 import { createClient } from "@/lib/supabase/client";
-import { deleteCharacter, getCharacters } from "@/lib/storage";
+import {
+  deleteCharacter,
+  getCharacters,
+  getLocalDataSnapshot,
+  hasDismissedImportThisSession,
+  hasImportedForUser,
+} from "@/lib/storage";
 import type { Character } from "@/lib/types";
 
 const BANNER_DISMISSED_KEY = "mikabu-signin-banner-dismissed";
@@ -26,6 +33,8 @@ export default function Home() {
   const [charactersLoading, setCharactersLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [bannerDismissed, setBannerDismissed] = useState(true);
+  const [importOfferCount, setImportOfferCount] = useState<number | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
     if (authLoading) return;
@@ -50,11 +59,24 @@ export default function Home() {
     return () => {
       cancelled = true;
     };
-  }, [authLoading, user?.id]);
+  }, [authLoading, user?.id, reloadToken]);
 
   useEffect(() => {
     setBannerDismissed(sessionStorage.getItem(BANNER_DISMISSED_KEY) === "true");
   }, []);
+
+  useEffect(() => {
+    if (authLoading || !user) {
+      setImportOfferCount(null);
+      return;
+    }
+    if (hasImportedForUser(user.id) || hasDismissedImportThisSession(user.id)) return;
+
+    const localCharacterCount = getLocalDataSnapshot().characters.length;
+    if (localCharacterCount > 0) {
+      setImportOfferCount(localCharacterCount);
+    }
+  }, [authLoading, user?.id]);
 
   async function handleDelete(id: string) {
     const previous = characters;
@@ -77,6 +99,14 @@ export default function Home() {
     await supabase.auth.signOut();
     router.push("/");
     router.refresh();
+  }
+
+  function handleImportDismiss() {
+    setImportOfferCount(null);
+  }
+
+  function handleImported() {
+    setReloadToken((n) => n + 1);
   }
 
   const showBanner = !authLoading && !user && !bannerDismissed;
@@ -191,6 +221,15 @@ export default function Home() {
             />
           ))}
         </div>
+      )}
+
+      {importOfferCount !== null && user && (
+        <ImportLocalDataDialog
+          userId={user.id}
+          characterCount={importOfferCount}
+          onDismiss={handleImportDismiss}
+          onImported={handleImported}
+        />
       )}
     </main>
   );
