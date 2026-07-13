@@ -6,17 +6,39 @@ import Link from "next/link";
 import ChatWindow from "@/components/chat/ChatWindow";
 import StudyPanel from "@/components/study/StudyPanel";
 import ModeToggle, { type Mode } from "@/components/ModeToggle";
+import { useAuth } from "@/components/AuthProvider";
 import { getCharacter } from "@/lib/storage";
 import type { Character } from "@/lib/types";
 
 export default function CharacterPage() {
   const params = useParams<{ characterId: string }>();
+  const { user, isLoading: authLoading } = useAuth();
   const [character, setCharacter] = useState<Character | null | undefined>(undefined);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>("chat");
 
   useEffect(() => {
-    setCharacter(getCharacter(params.characterId) ?? null);
-  }, [params.characterId]);
+    if (authLoading) return;
+
+    let cancelled = false;
+    setCharacter(undefined);
+    setLoadError(null);
+
+    getCharacter(params.characterId)
+      .then((found) => {
+        if (cancelled) return;
+        setCharacter(found ?? null);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setLoadError("Couldn't load this character. Please check your connection and try again.");
+        setCharacter(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [params.characterId, authLoading, user?.id]);
 
   if (character === undefined) {
     return null;
@@ -25,7 +47,10 @@ export default function CharacterPage() {
   if (character === null) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center gap-3 bg-paper px-4 text-center">
-        <h1 className="text-3xl font-bold text-ink">Character not found</h1>
+        <h1 className="text-3xl font-bold text-ink">
+          {loadError ? "Something went wrong" : "Character not found"}
+        </h1>
+        {loadError && <p className="text-base text-muted">{loadError}</p>}
         <Link
           href="/"
           className="text-base font-medium text-muted underline underline-offset-4 transition-colors hover:text-ink"

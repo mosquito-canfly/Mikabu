@@ -35,6 +35,10 @@ const TOOL_LABELS: Record<StudyTool, string> = {
   summary: "Summary",
 };
 
+const STORAGE_SAVE_ERROR = "Couldn't save your study session. Please check your connection.";
+const STORAGE_DELETE_ERROR = "Couldn't delete that study session. Please check your connection.";
+const STORAGE_LOAD_ERROR = "Couldn't load your study sessions. Please check your connection and try again.";
+
 function createStudySession(characterId: string, title: string): StudySession {
   const now = Date.now();
   return {
@@ -66,6 +70,10 @@ export default function StudyPanel({ character }: StudyPanelProps) {
   const [activeSessionId, setActiveSessionId] = useState<string>("");
   const [notes, setNotes] = useState("");
   const [files, setFiles] = useState<StudyFile[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [storageError, setStorageError] = useState<string | null>(null);
+  const [retryToken, setRetryToken] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -74,25 +82,44 @@ export default function StudyPanel({ character }: StudyPanelProps) {
   const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    const existingSessions = getStudySessionsForCharacter(character.id);
-    const mostRecent = existingSessions[0];
+    let cancelled = false;
+    setSessionsLoading(true);
+    setLoadError(null);
 
-    if (mostRecent && isStudyUntouched(mostRecent)) {
-      setSessions(existingSessions);
-      setActiveSessionId(mostRecent.id);
-      setNotes(mostRecent.notes);
-      setFiles(mostRecent.files ?? []);
-    } else {
-      const fresh = createStudySession(character.id, `New study ${nextStudyNumber(character.id)}`);
-      saveStudySession(fresh);
-      setSessions([fresh, ...existingSessions]);
-      setActiveSessionId(fresh.id);
-      setNotes(fresh.notes);
-      setFiles(fresh.files);
-    }
+    (async () => {
+      try {
+        const existingSessions = await getStudySessionsForCharacter(character.id);
+        if (cancelled) return;
 
-    setError(null);
-  }, [character.id]);
+        const mostRecent = existingSessions[0];
+        if (mostRecent && isStudyUntouched(mostRecent)) {
+          setSessions(existingSessions);
+          setActiveSessionId(mostRecent.id);
+          setNotes(mostRecent.notes);
+          setFiles(mostRecent.files ?? []);
+        } else {
+          const nextNumber = await nextStudyNumber(character.id);
+          if (cancelled) return;
+          const fresh = createStudySession(character.id, `New study ${nextNumber}`);
+          await saveStudySession(fresh);
+          if (cancelled) return;
+          setSessions([fresh, ...existingSessions]);
+          setActiveSessionId(fresh.id);
+          setNotes(fresh.notes);
+          setFiles(fresh.files);
+        }
+        setError(null);
+      } catch {
+        if (!cancelled) setLoadError(STORAGE_LOAD_ERROR);
+      } finally {
+        if (!cancelled) setSessionsLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [character.id, retryToken]);
 
   const activeSession = sessions.find((s) => s.id === activeSessionId);
   const sortedSessions = [...sessions].sort((a, b) => b.updatedAt - a.updatedAt);
@@ -106,7 +133,9 @@ export default function StudyPanel({ character }: StudyPanelProps) {
       if (index === -1 || current[index].notes === text) return current;
 
       const updated: StudySession = { ...current[index], notes: text, updatedAt: Date.now() };
-      saveStudySession(updated);
+      saveStudySession(updated)
+        .then(() => setStorageError(null))
+        .catch(() => setStorageError(STORAGE_SAVE_ERROR));
       const next = [...current];
       next[index] = updated;
       return next;
@@ -119,7 +148,9 @@ export default function StudyPanel({ character }: StudyPanelProps) {
       if (index === -1) return current;
 
       const updated: StudySession = { ...current[index], files: attachments, updatedAt: Date.now() };
-      saveStudySession(updated);
+      saveStudySession(updated)
+        .then(() => setStorageError(null))
+        .catch(() => setStorageError(STORAGE_SAVE_ERROR));
       const next = [...current];
       next[index] = updated;
       return next;
@@ -177,7 +208,9 @@ export default function StudyPanel({ character }: StudyPanelProps) {
         results: [...current[index].results, result],
         updatedAt: Date.now(),
       };
-      saveStudySession(updated);
+      saveStudySession(updated)
+        .then(() => setStorageError(null))
+        .catch(() => setStorageError(STORAGE_SAVE_ERROR));
       const next = [...current];
       next[index] = updated;
       return next;
@@ -244,17 +277,29 @@ export default function StudyPanel({ character }: StudyPanelProps) {
     abortControllerRef.current?.abort();
   }
 
-  function handleNewSession() {
+  async function handleNewSession() {
     if (activeSession && isStudyUntouched(activeSession, notes, files)) return;
 
     flushPendingSaves();
-    const fresh = createStudySession(character.id, `New study ${nextStudyNumber(character.id)}`);
-    saveStudySession(fresh);
+
+    let nextNumber: number;
+    try {
+      nextNumber = await nextStudyNumber(character.id);
+    } catch {
+      setStorageError(STORAGE_SAVE_ERROR);
+      return;
+    }
+
+    const fresh = createStudySession(character.id, `New study ${nextNumber}`);
     setSessions((current) => [fresh, ...current]);
     setActiveSessionId(fresh.id);
     setNotes(fresh.notes);
     setFiles(fresh.files);
     setError(null);
+
+    saveStudySession(fresh)
+      .then(() => setStorageError(null))
+      .catch(() => setStorageError(STORAGE_SAVE_ERROR));
   }
 
   function handleSelectSession(sessionId: string) {
@@ -272,13 +317,19 @@ export default function StudyPanel({ character }: StudyPanelProps) {
     if (!target) return;
 
     const renamed: StudySession = { ...target, title: newTitle };
-    saveStudySession(renamed);
     setSessions((current) => current.map((s) => (s.id === sessionId ? renamed : s)));
+
+    saveStudySession(renamed)
+      .then(() => setStorageError(null))
+      .catch(() => setStorageError(STORAGE_SAVE_ERROR));
   }
 
-  function handleDeleteSession(sessionId: string) {
-    deleteStudySession(sessionId);
+  async function handleDeleteSession(sessionId: string) {
     const remaining = sessions.filter((s) => s.id !== sessionId);
+
+    deleteStudySession(sessionId)
+      .then(() => setStorageError(null))
+      .catch(() => setStorageError(STORAGE_DELETE_ERROR));
 
     if (sessionId !== activeSessionId) {
       setSessions(remaining);
@@ -301,15 +352,52 @@ export default function StudyPanel({ character }: StudyPanelProps) {
       setNotes(mostRecent.notes);
       setFiles(mostRecent.files ?? []);
     } else {
-      const fresh = createStudySession(character.id, `New study ${nextStudyNumber(character.id)}`);
-      saveStudySession(fresh);
-      setSessions([fresh]);
-      setActiveSessionId(fresh.id);
-      setNotes(fresh.notes);
-      setFiles(fresh.files);
+      try {
+        const nextNumber = await nextStudyNumber(character.id);
+        const fresh = createStudySession(character.id, `New study ${nextNumber}`);
+        setSessions([fresh]);
+        setActiveSessionId(fresh.id);
+        setNotes(fresh.notes);
+        setFiles(fresh.files);
+        saveStudySession(fresh)
+          .then(() => setStorageError(null))
+          .catch(() => setStorageError(STORAGE_SAVE_ERROR));
+      } catch {
+        setSessions([]);
+        setActiveSessionId("");
+        setNotes("");
+        setFiles([]);
+        setStorageError(STORAGE_SAVE_ERROR);
+      }
     }
 
     setError(null);
+  }
+
+  if (sessionsLoading) {
+    return (
+      <div className="flex h-full min-h-0 flex-1 flex-col items-center justify-center gap-3">
+        <div className="w-56">
+          <LoadingBar active accent="sky" />
+        </div>
+        <p className="text-base text-muted">Loading your study sessions...</p>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="flex h-full min-h-0 flex-1 flex-col items-center justify-center gap-3 text-center">
+        <p className="text-base text-red-700">{loadError}</p>
+        <button
+          type="button"
+          onClick={() => setRetryToken((n) => n + 1)}
+          className="rounded-full bg-ink px-4 py-2 text-base font-medium text-paper transition-opacity hover:opacity-90"
+        >
+          Try again
+        </button>
+      </div>
+    );
   }
 
   return (
@@ -341,6 +429,12 @@ export default function StudyPanel({ character }: StudyPanelProps) {
             {sidebarOpen ? "Hide sessions" : "Show sessions"}
           </button>
         </div>
+
+        {storageError && (
+          <p className="border-b border-line bg-red-50 px-4 py-2 text-sm text-red-700">
+            {storageError}
+          </p>
+        )}
 
         <div className="flex-1 overflow-y-auto px-4 py-8">
           <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Logo from "@/components/Logo";
 import CharacterCard from "@/components/character/CharacterCard";
+import LoadingBar from "@/components/LoadingBar";
 import { useAuth } from "@/components/AuthProvider";
 import { createClient } from "@/lib/supabase/client";
 import { deleteCharacter, getCharacters } from "@/lib/storage";
@@ -22,19 +23,48 @@ export default function Home() {
   const router = useRouter();
   const { user, username, isLoading: authLoading } = useAuth();
   const [characters, setCharacters] = useState<Character[]>([]);
+  const [charactersLoading, setCharactersLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [bannerDismissed, setBannerDismissed] = useState(true);
 
   useEffect(() => {
-    setCharacters(getCharacters());
-  }, []);
+    if (authLoading) return;
+
+    let cancelled = false;
+    setCharactersLoading(true);
+    setError(null);
+
+    getCharacters()
+      .then((data) => {
+        if (cancelled) return;
+        setCharacters(data);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setError("Couldn't load your characters. Please check your connection and try again.");
+      })
+      .finally(() => {
+        if (!cancelled) setCharactersLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, user?.id]);
 
   useEffect(() => {
     setBannerDismissed(sessionStorage.getItem(BANNER_DISMISSED_KEY) === "true");
   }, []);
 
-  function handleDelete(id: string) {
-    deleteCharacter(id);
+  async function handleDelete(id: string) {
+    const previous = characters;
     setCharacters((prev) => prev.filter((character) => character.id !== id));
+    try {
+      await deleteCharacter(id);
+    } catch {
+      setCharacters(previous);
+      setError("Couldn't delete that character. Please check your connection and try again.");
+    }
   }
 
   function dismissBanner() {
@@ -91,7 +121,7 @@ export default function Home() {
               )}
             </>
           )}
-          {characters.length > 0 && (
+          {!charactersLoading && characters.length > 0 && (
             <Link
               href="/create"
               className="rounded-full bg-ink px-5 py-2.5 text-base font-medium text-paper transition-opacity hover:opacity-90"
@@ -101,6 +131,12 @@ export default function Home() {
           )}
         </div>
       </header>
+
+      {error && (
+        <p className="rounded-2xl border-2 border-red-200 bg-red-50 px-4 py-2.5 text-base text-red-700">
+          {error}
+        </p>
+      )}
 
       {showBanner && (
         <div className="flex flex-col items-start gap-3 rounded-2xl border-2 border-line bg-sky/20 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
@@ -127,7 +163,14 @@ export default function Home() {
         </div>
       )}
 
-      {characters.length === 0 ? (
+      {charactersLoading ? (
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 py-24">
+          <div className="w-full max-w-xs">
+            <LoadingBar active accent="star" />
+          </div>
+          <p className="text-base text-muted">Loading your characters...</p>
+        </div>
+      ) : characters.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-5 rounded-3xl border-2 border-dashed border-line py-24 text-center">
           <p className="text-xl font-bold text-ink">Create your own character now!</p>
           <Link

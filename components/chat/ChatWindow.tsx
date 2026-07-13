@@ -41,9 +41,17 @@ function isUntouched(session: ChatSession): boolean {
   return isBlank(session) && session.title === NEW_CHAT_TITLE;
 }
 
+const STORAGE_SAVE_ERROR = "Couldn't save your chat. Please check your connection.";
+const STORAGE_DELETE_ERROR = "Couldn't delete that chat. Please check your connection.";
+const STORAGE_LOAD_ERROR = "Couldn't load your chats. Please check your connection and try again.";
+
 export default function ChatWindow({ character }: ChatWindowProps) {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string>("");
+  const [sessionsLoading, setSessionsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [storageError, setStorageError] = useState<string | null>(null);
+  const [retryToken, setRetryToken] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -51,21 +59,38 @@ export default function ChatWindow({ character }: ChatWindowProps) {
   const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    const existingSessions = getSessionsForCharacter(character.id);
-    const mostRecent = existingSessions[0];
+    let cancelled = false;
+    setSessionsLoading(true);
+    setLoadError(null);
 
-    if (mostRecent && isUntouched(mostRecent)) {
-      setSessions(existingSessions);
-      setActiveSessionId(mostRecent.id);
-    } else {
-      const fresh = createSession(character.id);
-      saveSession(fresh);
-      setSessions([fresh, ...existingSessions]);
-      setActiveSessionId(fresh.id);
-    }
+    (async () => {
+      try {
+        const existingSessions = await getSessionsForCharacter(character.id);
+        if (cancelled) return;
 
-    setError(null);
-  }, [character.id]);
+        const mostRecent = existingSessions[0];
+        if (mostRecent && isUntouched(mostRecent)) {
+          setSessions(existingSessions);
+          setActiveSessionId(mostRecent.id);
+        } else {
+          const fresh = createSession(character.id);
+          await saveSession(fresh);
+          if (cancelled) return;
+          setSessions([fresh, ...existingSessions]);
+          setActiveSessionId(fresh.id);
+        }
+        setError(null);
+      } catch {
+        if (!cancelled) setLoadError(STORAGE_LOAD_ERROR);
+      } finally {
+        if (!cancelled) setSessionsLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [character.id, retryToken]);
 
   const activeSession = sessions.find((s) => s.id === activeSessionId);
   const messages = activeSession?.messages ?? [];
@@ -77,7 +102,6 @@ export default function ChatWindow({ character }: ChatWindowProps) {
   }, [messages, isLoading]);
 
   function updateSession(updated: ChatSession) {
-    saveSession(updated);
     setSessions((current) => {
       const index = current.findIndex((s) => s.id === updated.id);
       if (index === -1) return [...current, updated];
@@ -85,6 +109,10 @@ export default function ChatWindow({ character }: ChatWindowProps) {
       next[index] = updated;
       return next;
     });
+
+    saveSession(updated)
+      .then(() => setStorageError(null))
+      .catch(() => setStorageError(STORAGE_SAVE_ERROR));
   }
 
   async function handleSend(text: string) {
@@ -169,10 +197,13 @@ export default function ChatWindow({ character }: ChatWindowProps) {
     if (activeSession && isUntouched(activeSession)) return;
 
     const fresh = createSession(character.id);
-    saveSession(fresh);
     setSessions((current) => [fresh, ...current]);
     setActiveSessionId(fresh.id);
     setError(null);
+
+    saveSession(fresh)
+      .then(() => setStorageError(null))
+      .catch(() => setStorageError(STORAGE_SAVE_ERROR));
   }
 
   function handleSelectSession(sessionId: string) {
@@ -185,13 +216,19 @@ export default function ChatWindow({ character }: ChatWindowProps) {
     if (!target) return;
 
     const renamed: ChatSession = { ...target, title: newTitle };
-    saveSession(renamed);
     setSessions((current) => current.map((s) => (s.id === sessionId ? renamed : s)));
+
+    saveSession(renamed)
+      .then(() => setStorageError(null))
+      .catch(() => setStorageError(STORAGE_SAVE_ERROR));
   }
 
   function handleDeleteSession(sessionId: string) {
-    deleteSession(sessionId);
     const remaining = sessions.filter((s) => s.id !== sessionId);
+
+    deleteSession(sessionId)
+      .then(() => setStorageError(null))
+      .catch(() => setStorageError(STORAGE_DELETE_ERROR));
 
     if (sessionId !== activeSessionId) {
       setSessions(remaining);
@@ -204,12 +241,40 @@ export default function ChatWindow({ character }: ChatWindowProps) {
       setActiveSessionId(mostRecent.id);
     } else {
       const fresh = createSession(character.id);
-      saveSession(fresh);
       setSessions([fresh]);
       setActiveSessionId(fresh.id);
+      saveSession(fresh)
+        .then(() => setStorageError(null))
+        .catch(() => setStorageError(STORAGE_SAVE_ERROR));
     }
 
     setError(null);
+  }
+
+  if (sessionsLoading) {
+    return (
+      <div className="flex h-full min-h-0 flex-1 flex-col items-center justify-center gap-3">
+        <div className="w-56">
+          <LoadingBar active accent="star" />
+        </div>
+        <p className="text-base text-muted">Loading your chats...</p>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="flex h-full min-h-0 flex-1 flex-col items-center justify-center gap-3 text-center">
+        <p className="text-base text-red-700">{loadError}</p>
+        <button
+          type="button"
+          onClick={() => setRetryToken((n) => n + 1)}
+          className="rounded-full bg-ink px-4 py-2 text-base font-medium text-paper transition-opacity hover:opacity-90"
+        >
+          Try again
+        </button>
+      </div>
+    );
   }
 
   return (
@@ -241,6 +306,12 @@ export default function ChatWindow({ character }: ChatWindowProps) {
             {sidebarOpen ? "Hide chats" : "Show chats"}
           </button>
         </div>
+
+        {storageError && (
+          <p className="border-b border-line bg-red-50 px-4 py-2 text-sm text-red-700">
+            {storageError}
+          </p>
+        )}
 
         <div className="flex-1 overflow-y-auto px-4 py-4">
           <div className="mx-auto flex w-full max-w-2xl flex-col gap-3">
