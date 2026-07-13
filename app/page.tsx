@@ -28,12 +28,14 @@ export default function Home() {
           </h1>
           <p className="mt-2 text-lg text-muted">Your character, your story</p>
         </div>
-        <Link
-          href="/create"
-          className="rounded-full bg-ink px-5 py-2.5 text-base font-medium text-paper transition-opacity hover:opacity-90"
-        >
-          New Character
-        </Link>
+        {characters.length > 0 && (
+          <Link
+            href="/create"
+            className="rounded-full bg-ink px-5 py-2.5 text-base font-medium text-paper transition-opacity hover:opacity-90"
+          >
+            New Character
+          </Link>
+        )}
       </header>
 
       {characters.length === 0 ? (
