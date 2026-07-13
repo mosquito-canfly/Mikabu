@@ -48,6 +48,7 @@ export default function ChatWindow({ character }: ChatWindowProps) {
   const [error, setError] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     const existingSessions = getSessionsForCharacter(character.id);
@@ -111,6 +112,9 @@ export default function ChatWindow({ character }: ChatWindowProps) {
     setIsLoading(true);
     setError(null);
 
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
@@ -119,6 +123,7 @@ export default function ChatWindow({ character }: ChatWindowProps) {
           character,
           messages: sessionWithUserMessage.messages,
         }),
+        signal: controller.signal,
       });
 
       if (!response.ok) {
@@ -126,6 +131,8 @@ export default function ChatWindow({ character }: ChatWindowProps) {
       }
 
       const data: { reply: string } = await response.json();
+
+      if (controller.signal.aborted) return;
 
       const assistantMessage: Message = {
         id: crypto.randomUUID(),
@@ -141,11 +148,21 @@ export default function ChatWindow({ character }: ChatWindowProps) {
       };
 
       updateSession(sessionWithReply);
-    } catch {
+    } catch (err) {
+      if (controller.signal.aborted || (err instanceof DOMException && err.name === "AbortError")) {
+        return;
+      }
       setError("Something went wrong, please try again.");
     } finally {
+      if (abortControllerRef.current === controller) {
+        abortControllerRef.current = null;
+      }
       setIsLoading(false);
     }
+  }
+
+  function handleStop() {
+    abortControllerRef.current?.abort();
   }
 
   function handleNewSession() {
@@ -259,7 +276,7 @@ export default function ChatWindow({ character }: ChatWindowProps) {
 
         <div className="mx-auto flex w-full max-w-2xl flex-col gap-2">
           <LoadingBar active={isLoading} accent="star" />
-          <ChatInput onSend={handleSend} disabled={isLoading} />
+          <ChatInput onSend={handleSend} onStop={handleStop} isLoading={isLoading} />
         </div>
       </div>
     </div>

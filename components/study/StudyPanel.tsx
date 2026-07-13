@@ -71,6 +71,7 @@ export default function StudyPanel({ character }: StudyPanelProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const notesSaveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const filesSaveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     const existingSessions = getStudySessionsForCharacter(character.id);
@@ -189,11 +190,15 @@ export default function StudyPanel({ character }: StudyPanelProps) {
     setIsLoading(true);
     setError(null);
 
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
       const response = await fetch("/api/study", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ character, tool, notes, files }),
+        signal: controller.signal,
       });
 
       if (!response.ok) {
@@ -203,6 +208,7 @@ export default function StudyPanel({ character }: StudyPanelProps) {
 
       if (tool === "quiz") {
         const data: { questions: QuizQuestion[] } = await response.json();
+        if (controller.signal.aborted) return;
         appendResult({
           id: crypto.randomUUID(),
           tool,
@@ -211,6 +217,7 @@ export default function StudyPanel({ character }: StudyPanelProps) {
         });
       } else {
         const data: { text: string } = await response.json();
+        if (controller.signal.aborted) return;
         appendResult({
           id: crypto.randomUUID(),
           tool,
@@ -219,12 +226,22 @@ export default function StudyPanel({ character }: StudyPanelProps) {
         });
       }
     } catch (err) {
+      if (controller.signal.aborted || (err instanceof DOMException && err.name === "AbortError")) {
+        return;
+      }
       setError(
         err instanceof Error ? err.message : "Something went wrong. Please try again."
       );
     } finally {
+      if (abortControllerRef.current === controller) {
+        abortControllerRef.current = null;
+      }
       setIsLoading(false);
     }
+  }
+
+  function handleStop() {
+    abortControllerRef.current?.abort();
   }
 
   function handleNewSession() {
@@ -333,7 +350,18 @@ export default function StudyPanel({ character }: StudyPanelProps) {
               files={files}
               onFilesChange={handleFilesChange}
             />
-            <StudyToolbar onSelect={handleSelectTool} disabled={isLoading || !hasUsableContent} />
+            <div className="flex flex-wrap items-center gap-2">
+              <StudyToolbar onSelect={handleSelectTool} disabled={isLoading || !hasUsableContent} />
+              {isLoading && (
+                <button
+                  type="button"
+                  onClick={handleStop}
+                  className="rounded-full bg-ink px-4 py-2 text-base font-medium text-paper transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky"
+                >
+                  Stop
+                </button>
+              )}
+            </div>
             <LoadingBar active={isLoading} accent="sky" />
 
             {isLoading && (

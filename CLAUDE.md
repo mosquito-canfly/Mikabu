@@ -94,3 +94,4 @@ not corporate, not childish.
 - [x] Step 11: Visual design pass (palette, Fredoka, mode theming)
 - [x] Step 12: File upload in study mode (PDF and images)
 - [x] Step 13: Mode-tinted loading bar
+- [x] Step 14: Stop button, app icon, and metadata

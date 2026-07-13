@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Logo from "@/components/Logo";
 import CharacterCard from "@/components/character/CharacterCard";
 import { deleteCharacter, getCharacters } from "@/lib/storage";
 import type { Character } from "@/lib/types";
@@ -22,7 +23,9 @@ export default function Home() {
     <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-10 px-4 py-16">
       <header className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-4xl font-bold text-ink sm:text-5xl">Mikabu</h1>
+          <h1 className="text-4xl sm:text-5xl">
+            <Logo />
+          </h1>
           <p className="mt-2 text-lg text-muted">Your character, your story</p>
         </div>
         <Link
