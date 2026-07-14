@@ -45,6 +45,54 @@ const STORAGE_SAVE_ERROR = "Couldn't save your chat. Please check your connectio
 const STORAGE_DELETE_ERROR = "Couldn't delete that chat. Please check your connection.";
 const STORAGE_LOAD_ERROR = "Couldn't load your chats. Please check your connection and try again.";
 
+// Module-level guard, keyed by character id, shared across every mount of
+// this component — including React StrictMode's dev-only double-invoke and
+// any real remount the parent triggers (e.g. while auth is still settling
+// and resets its character state). A per-instance ref can't prevent this,
+// since a real remount gets a brand-new component instance; only something
+// that survives across instances does. Without it, two concurrent mounts
+// each see "no untouched session yet" and each create their own.
+const chatInitInFlight = new Map<string, Promise<ChatSession[]>>();
+
+function ensureChatSessionsInitialized(characterId: string): Promise<ChatSession[]> {
+  const inFlight = chatInitInFlight.get(characterId);
+  if (inFlight) return inFlight;
+
+  const promise = (async () => {
+    let existingSessions = await getSessionsForCharacter(characterId);
+
+    // One-time cleanup: earlier versions of this effect could create more
+    // than one blank, untouched session per character before this guard
+    // existed. Keep the most recently updated one and remove the rest —
+    // never touches a session with real content or a custom title.
+    const untouched = existingSessions.filter(isUntouched);
+    if (untouched.length > 1) {
+      const duplicates = untouched.slice(1);
+      const duplicateIds = new Set(duplicates.map((s) => s.id));
+      await Promise.all(duplicates.map((s) => deleteSession(s.id).catch(() => {})));
+      existingSessions = existingSessions.filter((s) => !duplicateIds.has(s.id));
+    }
+
+    const mostRecent = existingSessions[0];
+    if (mostRecent && isUntouched(mostRecent)) {
+      return existingSessions;
+    }
+
+    const fresh = createSession(characterId);
+    await saveSession(fresh);
+    return [fresh, ...existingSessions];
+  })();
+
+  chatInitInFlight.set(characterId, promise);
+  promise.finally(() => {
+    if (chatInitInFlight.get(characterId) === promise) {
+      chatInitInFlight.delete(characterId);
+    }
+  });
+
+  return promise;
+}
+
 export default function ChatWindow({ character }: ChatWindowProps) {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string>("");
@@ -63,29 +111,19 @@ export default function ChatWindow({ character }: ChatWindowProps) {
     setSessionsLoading(true);
     setLoadError(null);
 
-    (async () => {
-      try {
-        const existingSessions = await getSessionsForCharacter(character.id);
+    ensureChatSessionsInitialized(character.id)
+      .then((initializedSessions) => {
         if (cancelled) return;
-
-        const mostRecent = existingSessions[0];
-        if (mostRecent && isUntouched(mostRecent)) {
-          setSessions(existingSessions);
-          setActiveSessionId(mostRecent.id);
-        } else {
-          const fresh = createSession(character.id);
-          await saveSession(fresh);
-          if (cancelled) return;
-          setSessions([fresh, ...existingSessions]);
-          setActiveSessionId(fresh.id);
-        }
+        setSessions(initializedSessions);
+        setActiveSessionId(initializedSessions[0].id);
         setError(null);
-      } catch {
+      })
+      .catch(() => {
         if (!cancelled) setLoadError(STORAGE_LOAD_ERROR);
-      } finally {
+      })
+      .finally(() => {
         if (!cancelled) setSessionsLoading(false);
-      }
-    })();
+      });
 
     return () => {
       cancelled = true;

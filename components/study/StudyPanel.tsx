@@ -65,6 +65,55 @@ function isStudyUntouched(session: StudySession, liveNotes?: string, liveFiles?:
   return isStudyBlank(session, liveNotes, liveFiles) && NEW_STUDY_TITLE_PATTERN.test(session.title);
 }
 
+// Module-level guard, keyed by character id, shared across every mount of
+// this component — including React StrictMode's dev-only double-invoke and
+// any real remount the parent triggers (e.g. while auth is still settling
+// and resets its character state). A per-instance ref can't prevent this,
+// since a real remount gets a brand-new component instance; only something
+// that survives across instances does. Without it, two concurrent mounts
+// each see "no untouched session yet" and each create their own.
+const studyInitInFlight = new Map<string, Promise<StudySession[]>>();
+
+function ensureStudySessionsInitialized(characterId: string): Promise<StudySession[]> {
+  const inFlight = studyInitInFlight.get(characterId);
+  if (inFlight) return inFlight;
+
+  const promise = (async () => {
+    let existingSessions = await getStudySessionsForCharacter(characterId);
+
+    // One-time cleanup: earlier versions of this effect could create more
+    // than one blank, untouched session per character before this guard
+    // existed. Keep the most recently updated one and remove the rest —
+    // never touches a session with real content or a custom title.
+    const untouched = existingSessions.filter((s) => isStudyUntouched(s));
+    if (untouched.length > 1) {
+      const duplicates = untouched.slice(1);
+      const duplicateIds = new Set(duplicates.map((s) => s.id));
+      await Promise.all(duplicates.map((s) => deleteStudySession(s.id).catch(() => {})));
+      existingSessions = existingSessions.filter((s) => !duplicateIds.has(s.id));
+    }
+
+    const mostRecent = existingSessions[0];
+    if (mostRecent && isStudyUntouched(mostRecent)) {
+      return existingSessions;
+    }
+
+    const nextNumber = await nextStudyNumber(characterId);
+    const fresh = createStudySession(characterId, `New study ${nextNumber}`);
+    await saveStudySession(fresh);
+    return [fresh, ...existingSessions];
+  })();
+
+  studyInitInFlight.set(characterId, promise);
+  promise.finally(() => {
+    if (studyInitInFlight.get(characterId) === promise) {
+      studyInitInFlight.delete(characterId);
+    }
+  });
+
+  return promise;
+}
+
 export default function StudyPanel({ character }: StudyPanelProps) {
   const [sessions, setSessions] = useState<StudySession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string>("");
@@ -103,35 +152,22 @@ export default function StudyPanel({ character }: StudyPanelProps) {
     setSessionsLoading(true);
     setLoadError(null);
 
-    (async () => {
-      try {
-        const existingSessions = await getStudySessionsForCharacter(character.id);
+    ensureStudySessionsInitialized(character.id)
+      .then((initializedSessions) => {
         if (cancelled) return;
-
-        const mostRecent = existingSessions[0];
-        if (mostRecent && isStudyUntouched(mostRecent)) {
-          setSessions(existingSessions);
-          setActiveSessionId(mostRecent.id);
-          setNotes(mostRecent.notes);
-          setFiles(mostRecent.files ?? []);
-        } else {
-          const nextNumber = await nextStudyNumber(character.id);
-          if (cancelled) return;
-          const fresh = createStudySession(character.id, `New study ${nextNumber}`);
-          await queueSessionSave(fresh);
-          if (cancelled) return;
-          setSessions([fresh, ...existingSessions]);
-          setActiveSessionId(fresh.id);
-          setNotes(fresh.notes);
-          setFiles(fresh.files);
-        }
+        const active = initializedSessions[0];
+        setSessions(initializedSessions);
+        setActiveSessionId(active.id);
+        setNotes(active.notes);
+        setFiles(active.files ?? []);
         setError(null);
-      } catch {
+      })
+      .catch(() => {
         if (!cancelled) setLoadError(STORAGE_LOAD_ERROR);
-      } finally {
+      })
+      .finally(() => {
         if (!cancelled) setSessionsLoading(false);
-      }
-    })();
+      });
 
     return () => {
       cancelled = true;
