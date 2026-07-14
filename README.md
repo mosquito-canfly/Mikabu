@@ -46,14 +46,23 @@ wall of notes alone.
 - **PDF and image upload** — attach PDF, PNG, JPEG, or WEBP files (up to 10MB each,
   multiple at once, drag-and-drop or file picker) alongside or instead of pasted notes.
   Files are sent to the model natively — there's no client-side text extraction, so the
-  model reads the actual document or image. File *contents* never touch localStorage;
-  only the file metadata is saved, so a re-opened session shows attached files as
-  "needs re-attaching" rather than silently pretending they're still usable.
+  model reads the actual document or image.
+- **Persistent file storage** — signed in, uploaded files are stored in Supabase Storage
+  and survive reloads: reopening a study session downloads and re-attaches them
+  automatically. Logged out, file contents stay in memory only, so a reopened session
+  shows attached files as "needs re-attaching" rather than silently pretending they're
+  still usable.
 - **Session history** — chat and study sessions are tracked separately per character,
   sorted by most recently updated, with inline rename and delete-with-confirmation.
   Study sessions auto-number ("New study 1", "New study 2", ...) using a per-character
   counter that only ever increments, so a number is never reused even after deleting a
   session.
+- **Accounts** — email and password sign up and log in.
+- **Try before signing up** — the app is fully usable while logged out, with everything
+  saved to that device's local storage. Sign in later and Mikabu offers to import that
+  local work into your account.
+- **Data that follows you** — once signed in, characters, chats, and study sessions sync
+  across devices instead of staying tied to one browser.
 
 ## Preview
 
@@ -74,7 +83,8 @@ wall of notes alone.
 | [React](https://react.dev/) | UI |
 | [Tailwind CSS](https://tailwindcss.com/) | Styling, via a small custom design-token theme |
 | [Google Gemini API](https://ai.google.dev/) | The model powering chat replies and study tools |
-| `localStorage` | Persistence — characters, sessions, and study metadata |
+| [Supabase](https://supabase.com/) (Postgres, Auth, Storage) | Accounts, database, and file storage for signed-in users |
+| `localStorage` | Persistence while logged out — characters, sessions, and study metadata on that device only |
 | [Vercel](https://vercel.com/) | Hosting |
 
 ## Architecture
@@ -98,17 +108,30 @@ it. Study mode doesn't get its own separate personality — it layers a task ("e
 this", "quiz me on this") onto the exact same persona, so the character can't drift
 between the two modes.
 
+**Two storage backends, one interface.** `lib/storage.ts` is the single place that
+decides whether data lives in `localStorage` (logged out) or Supabase Postgres (logged
+in) — every function checks the current session once and routes to the matching
+backend. No feature component ever branches on auth state itself; `CharacterForm`,
+`ChatWindow`, and `StudyPanel` just call `getCharacters()`, `saveSession()`, and so on.
+Row Level Security policies on every Supabase table enforce that a user can only read or
+write their own rows at the database level, which is exactly why it's safe to expose
+`NEXT_PUBLIC_SUPABASE_ANON_KEY` in the browser — the key alone grants no access; the
+database checks who's asking.
+
 ```
 app/
 ├── api/
 │   ├── chat/route.ts        # POST — chat replies
+│   ├── health/route.ts      # GET — keep-alive check for the Supabase cron
 │   └── study/route.ts       # POST — explain / quiz / summary
 ├── chat/[characterId]/page.tsx  # character page (chat + study toggle)
 ├── create/page.tsx          # character creation
 ├── globals.css              # design tokens, base styles
 ├── icon.png                 # app icon / favicon
-├── layout.tsx                # root layout, font, metadata
-└── page.tsx                  # home page (character list)
+├── layout.tsx                # root layout, font, metadata, AuthProvider
+├── login/page.tsx            # email/password log in
+├── page.tsx                  # home page (character list)
+└── signup/page.tsx           # email/password sign up
 components/
 ├── character/
 │   ├── CharacterCard.tsx
@@ -122,6 +145,8 @@ components/
 │   ├── QuizView.tsx
 │   ├── StudyPanel.tsx
 │   └── StudyToolbar.tsx
+├── AuthProvider.tsx           # session/user context, wraps the app
+├── ImportLocalDataDialog.tsx  # offers to import local data on sign-in
 ├── LoadingBar.tsx
 ├── Logo.tsx
 ├── MarkdownContent.tsx
@@ -131,8 +156,14 @@ lib/
 ├── ai/
 │   ├── client.ts             # only file that imports the provider SDK
 │   └── promptBuilder.ts      # persona + task prompt construction
-├── storage.ts                 # localStorage read/write for characters & sessions
+├── storage/
+│   └── files.ts               # Supabase Storage upload/download for study files
+├── storage.ts                 # routes reads & writes to localStorage or Supabase
+├── supabase/
+│   ├── client.ts               # browser Supabase client
+│   └── server.ts               # server Supabase client (cookie-based session)
 └── types.ts                   # shared TypeScript types
+middleware.ts                  # refreshes the Supabase session cookie on every request
 public/
 └── logo.png                   # logo used in the in-app lockup
 ```
@@ -151,10 +182,24 @@ Create a `.env.local` file in the project root:
 
 ```
 GEMINI_API_KEY=your_key_here
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
 A free key from [Google AI Studio](https://aistudio.google.com/) is enough to run the
-app — no paid tier required.
+app — no paid tier required. `GEMINI_API_KEY` must stay server-side, which is why every
+AI call goes through a Next.js API route instead of calling Gemini from the client. The
+two `NEXT_PUBLIC_` Supabase values are the opposite: they're safe to expose in the
+browser by design, since Row Level Security enforces per-user access at the database
+level rather than by hiding the key.
+
+You'll also need a [Supabase](https://supabase.com/) project with:
+
+- `characters`, `chat_sessions`, and `study_sessions` tables, each with a `user_id`
+  column and Row Level Security policies scoping rows to their owner
+- a `profiles` table for usernames
+- a private Storage bucket named `study-files`, with policies restricting each user to
+  files under a path starting with their own user id
 
 > **Never commit `.env.local` or your API key.** `.env*` is already listed in
 > `.gitignore`; keep it that way.
@@ -172,12 +217,33 @@ The app runs at [http://localhost:3000](http://localhost:3000).
 The live app is deployed on [Vercel](https://vercel.com/):
 
 1. Import the repository into Vercel.
-2. Add `GEMINI_API_KEY` as an environment variable in the project's settings.
+2. Add `GEMINI_API_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, and
+   `NEXT_PUBLIC_SUPABASE_ANON_KEY` as environment variables in the project's settings.
 3. Deploy.
 
 Environment variable changes only take effect on the **next** deployment — updating
 the value in Vercel's dashboard won't affect a deployment that's already running until
 you redeploy.
+
+`vercel.json` schedules a cron job that hits `/api/health` every few days to keep the
+Supabase project active — see [Notes and limitations](#notes-and-limitations).
+
+## Roadmap
+
+- [ ] Installable PWA
+- [ ] Multi-language interface (English and Mandarin)
+- [ ] Character avatars
+
+## Notes and limitations
+
+- **Logged out, data stays on that device.** There's no account tying it together, so
+  it won't show up if you open Mikabu on another browser or device. Sign in and it
+  syncs everywhere.
+- **The Supabase free tier pauses a project after 7 days without activity.** A scheduled
+  health check (see [Deploying](#deploying)) pings the database regularly to keep the
+  deployment awake.
+- **Free tier limits apply** to both Supabase's database and Storage — fine for a
+  portfolio project, worth knowing if you fork this and start putting real load on it.
 
 ## Design
 
