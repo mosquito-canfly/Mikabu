@@ -26,7 +26,7 @@ export default function ChatInput({ onSend, onStop, isLoading }: ChatInputProps)
   }
 
   return (
-    <div className="flex items-end gap-2 border-t border-line p-3">
+    <div className="flex items-end gap-2 border-t border-line p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
       <textarea
         rows={1}
         value={value}

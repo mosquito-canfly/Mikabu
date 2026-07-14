@@ -5,7 +5,7 @@ import Markdown from "react-markdown";
 import NotesUpload from "@/components/study/NotesUpload";
 import StudyToolbar from "@/components/study/StudyToolbar";
 import QuizView from "@/components/study/QuizView";
-import SessionSidebar from "@/components/SessionSidebar";
+import SessionDrawer, { MOBILE_QUERY } from "@/components/SessionDrawer";
 import LoadingBar from "@/components/LoadingBar";
 import { markdownComponents } from "@/components/MarkdownContent";
 import {
@@ -126,7 +126,15 @@ export default function StudyPanel({ character }: StudyPanelProps) {
   const [retryToken, setRetryToken] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  // Closed by default on mobile (an overlay covering the panel is unwelcome
+  // on first load), open by default on desktop (its usual, permanent spot).
+  // StudyPanel only ever mounts client-side (its parent renders null until
+  // the character loads via an effect), so reading matchMedia here can't
+  // cause a hydration mismatch.
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return !window.matchMedia(MOBILE_QUERY).matches;
+  });
   const notesSaveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   // Per-session save queue. Two saves to the same session (e.g. the immediate
@@ -446,24 +454,22 @@ export default function StudyPanel({ character }: StudyPanelProps) {
 
   return (
     <div className="flex h-full min-h-0 flex-1">
-      {sidebarOpen && (
-        <div className="w-64 shrink-0">
-          <SessionSidebar
-            items={sortedSessions}
-            activeId={activeSessionId}
-            newLabel="New study"
-            emptyLabel="No study sessions yet."
-            newDisabled={isNewSessionDisabled}
-            accent="sky"
-            onSelect={handleSelectSession}
-            onNew={handleNewSession}
-            onRename={handleRenameSession}
-            onDelete={handleDeleteSession}
-          />
-        </div>
-      )}
+      <SessionDrawer
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        items={sortedSessions}
+        activeId={activeSessionId}
+        newLabel="New study"
+        emptyLabel="No study sessions yet."
+        newDisabled={isNewSessionDisabled}
+        accent="sky"
+        onSelect={handleSelectSession}
+        onNew={handleNewSession}
+        onRename={handleRenameSession}
+        onDelete={handleDeleteSession}
+      />
 
-      <div className="flex h-full min-h-0 flex-1 flex-col">
+      <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
         <div className="flex items-center border-b border-line px-3 py-2">
           <button
             type="button"
@@ -480,7 +486,7 @@ export default function StudyPanel({ character }: StudyPanelProps) {
           </p>
         )}
 
-        <div className="flex-1 overflow-y-auto px-4 py-8">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-8 pb-[calc(2rem+env(safe-area-inset-bottom))]">
           <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
             <NotesUpload
               sessionId={activeSessionId}

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import MessageBubble from "@/components/chat/MessageBubble";
 import ChatInput from "@/components/chat/ChatInput";
-import SessionSidebar from "@/components/SessionSidebar";
+import SessionDrawer, { MOBILE_QUERY } from "@/components/SessionDrawer";
 import LoadingBar from "@/components/LoadingBar";
 import { deleteSession, getSessionsForCharacter, saveSession } from "@/lib/storage";
 import { isOfflineError, OFFLINE_MESSAGE } from "@/lib/network";
@@ -103,7 +103,15 @@ export default function ChatWindow({ character }: ChatWindowProps) {
   const [retryToken, setRetryToken] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  // Closed by default on mobile (an overlay covering the chat is unwelcome
+  // on first load), open by default on desktop (its usual, permanent spot).
+  // ChatWindow only ever mounts client-side (its parent renders null until
+  // the character loads via an effect), so reading matchMedia here can't
+  // cause a hydration mismatch.
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return !window.matchMedia(MOBILE_QUERY).matches;
+  });
   const bottomRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -318,24 +326,22 @@ export default function ChatWindow({ character }: ChatWindowProps) {
 
   return (
     <div className="flex h-full min-h-0 flex-1">
-      {sidebarOpen && (
-        <div className="w-64 shrink-0">
-          <SessionSidebar
-            items={sortedSessions}
-            activeId={activeSessionId}
-            newLabel="New chat"
-            emptyLabel="No chats yet."
-            newDisabled={isNewSessionDisabled}
-            accent="star"
-            onSelect={handleSelectSession}
-            onNew={handleNewSession}
-            onRename={handleRenameSession}
-            onDelete={handleDeleteSession}
-          />
-        </div>
-      )}
+      <SessionDrawer
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        items={sortedSessions}
+        activeId={activeSessionId}
+        newLabel="New chat"
+        emptyLabel="No chats yet."
+        newDisabled={isNewSessionDisabled}
+        accent="star"
+        onSelect={handleSelectSession}
+        onNew={handleNewSession}
+        onRename={handleRenameSession}
+        onDelete={handleDeleteSession}
+      />
 
-      <div className="flex h-full min-h-0 flex-1 flex-col">
+      <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
         <div className="flex items-center border-b border-line px-3 py-2">
           <button
             type="button"
@@ -352,7 +358,7 @@ export default function ChatWindow({ character }: ChatWindowProps) {
           </p>
         )}
 
-        <div className="flex-1 overflow-y-auto px-4 py-4">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
           <div className="mx-auto flex w-full max-w-2xl flex-col gap-3">
             {messages.length === 0 && (
               <p className="text-center text-base text-muted">

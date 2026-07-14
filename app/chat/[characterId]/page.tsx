@@ -63,15 +63,15 @@ export default function CharacterPage() {
 
   return (
     <main className="flex h-screen flex-col bg-paper">
-      <header className="flex items-center gap-4 border-b border-line px-4 py-3">
+      <header className="flex items-center gap-2 border-b border-line px-4 py-3 pt-[calc(0.75rem+env(safe-area-inset-top))] sm:gap-4">
         <Link
           href="/"
-          className="text-base font-medium text-muted underline underline-offset-4 transition-colors hover:text-ink"
+          className="shrink-0 text-base font-medium text-muted underline underline-offset-4 transition-colors hover:text-ink"
         >
           ← Back
         </Link>
-        <h1 className="text-xl font-bold text-ink">{character.name}</h1>
-        <div className="ml-auto">
+        <h1 className="min-w-0 flex-1 truncate text-xl font-bold text-ink">{character.name}</h1>
+        <div className="shrink-0">
           <ModeToggle mode={mode} onChange={setMode} />
         </div>
       </header>

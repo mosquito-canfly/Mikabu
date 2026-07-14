@@ -122,16 +122,16 @@ export default function Home() {
           </h1>
           <p className="mt-2 text-lg text-muted">Your character, your story</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex w-full flex-col gap-4 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
           {!authLoading && (
             <>
               {user ? (
-                <div className="flex items-center gap-3">
+                <div className="flex w-full items-center justify-between gap-3 sm:w-auto sm:justify-start">
                   <span
                     className="min-w-0 max-w-[240px] truncate text-base text-muted"
                     title={displayName}
                   >
-                    Hi {truncateName(displayName)}! (ﾉ≧∀≦)ﾉ
+                    Hi {truncateName(displayName)}!
                   </span>
                   <button
                     type="button"
@@ -144,7 +144,7 @@ export default function Home() {
               ) : (
                 <Link
                   href="/login"
-                  className="rounded-full bg-ink px-5 py-2.5 text-base font-medium text-paper transition-opacity hover:opacity-90"
+                  className="w-full rounded-full border-2 border-ink bg-paper px-5 py-2.5 text-center text-base font-medium text-ink transition-colors hover:bg-line/40 sm:w-auto"
                 >
                   Log in
                 </Link>
@@ -154,7 +154,7 @@ export default function Home() {
           {!charactersLoading && characters.length > 0 && (
             <Link
               href="/create"
-              className="rounded-full bg-ink px-5 py-2.5 text-base font-medium text-paper transition-opacity hover:opacity-90"
+              className="w-full shrink-0 rounded-full bg-ink px-5 py-2.5 text-center text-base font-medium text-paper transition-opacity hover:opacity-90 sm:w-auto"
             >
               New Character
             </Link>
@@ -177,7 +177,7 @@ export default function Home() {
           <div className="flex shrink-0 items-center gap-4">
             <Link
               href="/login"
-              className="rounded-full bg-sky px-4 py-2 text-sm font-medium text-ink transition-opacity hover:opacity-90"
+              className="rounded-full border-2 border-ink bg-paper px-4 py-2 text-sm font-medium text-ink transition-colors hover:bg-line/40"
             >
               Log in
             </Link>

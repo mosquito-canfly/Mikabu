@@ -7,7 +7,7 @@ interface SessionSidebarItem {
   title: string;
 }
 
-interface SessionSidebarProps {
+export interface SessionSidebarProps {
   items: SessionSidebarItem[];
   activeId: string;
   newLabel: string;
