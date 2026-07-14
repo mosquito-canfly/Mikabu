@@ -14,6 +14,7 @@ import {
   nextStudyNumber,
   saveStudySession,
 } from "@/lib/storage";
+import { isOfflineError, OFFLINE_MESSAGE } from "@/lib/network";
 import type {
   Character,
   QuizQuestion,
@@ -311,7 +312,11 @@ export default function StudyPanel({ character }: StudyPanelProps) {
         return;
       }
       setError(
-        err instanceof Error ? err.message : "Something went wrong. Please try again."
+        isOfflineError(err)
+          ? OFFLINE_MESSAGE
+          : err instanceof Error
+            ? err.message
+            : "Something went wrong. Please try again."
       );
     } finally {
       if (abortControllerRef.current === controller) {

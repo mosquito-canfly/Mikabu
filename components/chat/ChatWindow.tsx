@@ -6,6 +6,7 @@ import ChatInput from "@/components/chat/ChatInput";
 import SessionSidebar from "@/components/SessionSidebar";
 import LoadingBar from "@/components/LoadingBar";
 import { deleteSession, getSessionsForCharacter, saveSession } from "@/lib/storage";
+import { isOfflineError, OFFLINE_MESSAGE } from "@/lib/network";
 import type { Character, ChatSession, Message } from "@/lib/types";
 
 interface ChatWindowProps {
@@ -218,7 +219,7 @@ export default function ChatWindow({ character }: ChatWindowProps) {
       if (controller.signal.aborted || (err instanceof DOMException && err.name === "AbortError")) {
         return;
       }
-      setError("Something went wrong, please try again.");
+      setError(isOfflineError(err) ? OFFLINE_MESSAGE : "Something went wrong, please try again.");
     } finally {
       if (abortControllerRef.current === controller) {
         abortControllerRef.current = null;
