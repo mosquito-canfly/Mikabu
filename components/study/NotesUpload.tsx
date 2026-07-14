@@ -1,13 +1,24 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useAuth } from "@/components/AuthProvider";
+import {
+  deleteStudyFile,
+  downloadStudyFile,
+  isQuotaError,
+  STORAGE_QUOTA_MESSAGE,
+  uploadStudyFile,
+} from "@/lib/storage/files";
 import type { StudyFile } from "@/lib/types";
 
+type FilesUpdater = StudyFile[] | ((prev: StudyFile[]) => StudyFile[]);
+
 interface NotesUploadProps {
+  sessionId: string;
   notes: string;
   onNotesChange: (value: string) => void;
   files: StudyFile[];
-  onFilesChange: (files: StudyFile[]) => void;
+  onFilesChange: (update: FilesUpdater) => void;
 }
 
 const ACCEPTED_MIME_TYPES = ["application/pdf", "image/png", "image/jpeg", "image/webp"];
@@ -32,10 +43,64 @@ function readFileAsBase64(file: File): Promise<string> {
   });
 }
 
-export default function NotesUpload({ notes, onNotesChange, files, onFilesChange }: NotesUploadProps) {
+export default function NotesUpload({
+  sessionId,
+  notes,
+  onNotesChange,
+  files,
+  onFilesChange,
+}: NotesUploadProps) {
+  const { user } = useAuth();
   const [isDragging, setIsDragging] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
+  const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
   const inputRef = useRef<HTMLInputElement>(null);
+  // Tracks the session an in-flight upload/download belongs to, so a late
+  // completion (user switched sessions before it resolved) doesn't merge into
+  // — and persist onto — a session it was never meant for.
+  const sessionIdRef = useRef(sessionId);
+  useEffect(() => {
+    sessionIdRef.current = sessionId;
+  }, [sessionId]);
+
+  function markPending(id: string) {
+    setPendingIds((prev) => new Set(prev).add(id));
+  }
+
+  function clearPending(id: string) {
+    setPendingIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  }
+
+  // Reopening a session hands us files with a storagePath but no in-memory
+  // data yet — fetch their contents lazily so the panel isn't blocked on it.
+  useEffect(() => {
+    const toDownload = files.filter((file) => file.storagePath && !file.data && !pendingIds.has(file.id));
+    if (toDownload.length === 0) return;
+
+    const downloadSessionId = sessionId;
+    toDownload.forEach((file) => {
+      markPending(file.id);
+      downloadStudyFile(file.storagePath!)
+        .then((data) => {
+          if (sessionIdRef.current !== downloadSessionId) {
+            console.error(
+              `Study file ${file.name} finished downloading after switching away from its session; discarding to avoid mixing sessions.`
+            );
+            return;
+          }
+          onFilesChange((prev) => prev.map((f) => (f.id === file.id ? { ...f, data } : f)));
+        })
+        .catch((err) => {
+          console.error(`Failed to load study file ${file.name} from storage:`, err);
+        })
+        .finally(() => clearPending(file.id));
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [files, onFilesChange]);
 
   async function handleFilesSelected(fileList: FileList | null) {
     if (!fileList || fileList.length === 0) return;
@@ -69,7 +134,35 @@ export default function NotesUpload({ notes, onNotesChange, files, onFilesChange
     }
 
     if (accepted.length > 0) {
-      onFilesChange([...files, ...accepted]);
+      onFilesChange((prev) => [...prev, ...accepted]);
+
+      if (user) {
+        const uploadSessionId = sessionId;
+        accepted.forEach((file) => {
+          markPending(file.id);
+          uploadStudyFile(uploadSessionId, file)
+            .then((uploaded) => {
+              if (sessionIdRef.current !== uploadSessionId) {
+                console.error(
+                  `Study file ${file.name} finished uploading after switching away from its session; discarding to avoid mixing sessions.`
+                );
+                return;
+              }
+              onFilesChange((prev) =>
+                prev.map((f) => (f.id === file.id ? { ...f, storagePath: uploaded.storagePath } : f))
+              );
+            })
+            .catch((err) => {
+              console.error(`Failed to upload study file ${file.name} to storage:`, err);
+              setFileError(
+                isQuotaError(err)
+                  ? STORAGE_QUOTA_MESSAGE
+                  : `Couldn't save ${file.name} to your account, but it'll still work for this session.`
+              );
+            })
+            .finally(() => clearPending(file.id));
+        });
+      }
     }
     if (rejected.length > 0) {
       setFileError(`Couldn't attach: ${rejected.join(", ")}`);
@@ -77,7 +170,13 @@ export default function NotesUpload({ notes, onNotesChange, files, onFilesChange
   }
 
   function handleRemove(id: string) {
-    onFilesChange(files.filter((file) => file.id !== id));
+    const target = files.find((file) => file.id === id);
+    onFilesChange((prev) => prev.filter((file) => file.id !== id));
+    if (target?.storagePath) {
+      deleteStudyFile(target.storagePath).catch((err) => {
+        console.error(`Failed to delete study file ${target.name}:`, err);
+      });
+    }
   }
 
   function handleDrop(e: React.DragEvent<HTMLDivElement>) {
@@ -138,16 +237,18 @@ export default function NotesUpload({ notes, onNotesChange, files, onFilesChange
       {files.length > 0 && (
         <ul className="flex flex-wrap gap-2">
           {files.map((file) => {
-            const needsReattach = !file.data;
+            const isPending = pendingIds.has(file.id);
+            const needsReattach = !isPending && !file.data && !file.storagePath;
             return (
               <li
                 key={file.id}
                 className={`flex items-center gap-2 rounded-full border-2 px-3 py-1.5 text-sm ${
-                  needsReattach ? "border-line bg-line/30 text-muted" : "border-sky bg-sky/20 text-ink"
+                  needsReattach || isPending ? "border-line bg-line/30 text-muted" : "border-sky bg-sky/20 text-ink"
                 }`}
               >
                 <span className="font-medium">{FILE_TYPE_LABELS[file.mimeType] ?? "FILE"}</span>
                 <span className="max-w-[160px] truncate">{file.name}</span>
+                {isPending && <span className="italic">{file.data ? "saving…" : "loading…"}</span>}
                 {needsReattach && <span className="italic">needs re-attaching</span>}
                 <button
                   type="button"

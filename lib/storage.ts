@@ -1,4 +1,5 @@
 import { createClient } from "./supabase/client";
+import { deleteStudyFilesForSession } from "./storage/files";
 import type { Character, ChatSession, StudySession } from "./types";
 
 const CHARACTERS_KEY = "mikabu:characters";
@@ -42,13 +43,24 @@ function sortByUpdatedDesc<T extends { updatedAt: number }>(items: T[]): T[] {
 function sanitizeStudySession(session: StudySession): StudySession {
   return {
     ...session,
-    files: (session.files ?? []).map(({ id, name, mimeType, size }) => ({
+    files: (session.files ?? []).map(({ id, name, mimeType, size, storagePath }) => ({
       id,
       name,
       mimeType,
       size,
+      ...(storagePath ? { storagePath } : {}),
     })),
   };
+}
+
+// Best-effort bucket cleanup — logged so failures are visible, but never
+// blocks a session/character deletion the user is waiting on.
+async function cleanupStudyFiles(sessionId: string): Promise<void> {
+  try {
+    await deleteStudyFilesForSession(sessionId);
+  } catch (error) {
+    console.error(`Failed to delete study files for session ${sessionId}:`, error);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -242,6 +254,9 @@ async function saveCharacterDb(userId: string, character: Character): Promise<vo
 async function deleteCharacterDb(userId: string, id: string): Promise<void> {
   // ON DELETE CASCADE removes the character's chat_sessions and study_sessions
   // rows; the study counter lives inside this row's own data and goes with it.
+  // Bucket files aren't covered by that cascade, so clean them up per session first.
+  const studySessions = await getStudySessionsForCharacterDb(userId, id);
+  await Promise.all(studySessions.map((session) => cleanupStudyFiles(session.id)));
   await dbDeleteOne("characters", userId, id);
 }
 
@@ -297,10 +312,13 @@ async function saveStudySessionDb(userId: string, session: StudySession): Promis
 }
 
 async function deleteStudySessionDb(userId: string, id: string): Promise<void> {
+  await cleanupStudyFiles(id);
   await dbDeleteOne("study_sessions", userId, id);
 }
 
 async function deleteStudySessionsForCharacterDb(userId: string, characterId: string): Promise<void> {
+  const studySessions = await getStudySessionsForCharacterDb(userId, characterId);
+  await Promise.all(studySessions.map((session) => cleanupStudyFiles(session.id)));
   await dbDeleteForCharacter("study_sessions", userId, characterId);
 }
 

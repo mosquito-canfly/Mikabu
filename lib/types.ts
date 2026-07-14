@@ -52,9 +52,10 @@ export interface StudyResult {
 export interface StudyFile {
   id: string;
   name: string;
-  mimeType: string;   // e.g. "application/pdf", "image/png"
-  size: number;       // bytes
-  data?: string;      // base64, NOT persisted — in-memory only
+  mimeType: string;      // e.g. "application/pdf", "image/png"
+  size: number;          // bytes
+  data?: string;         // base64, NOT persisted — in-memory only
+  storagePath?: string;  // set when persisted to Supabase Storage; absent when in-memory only
 }
 
 export interface StudySession {

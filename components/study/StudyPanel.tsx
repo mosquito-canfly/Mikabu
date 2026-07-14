@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Markdown from "react-markdown";
 import NotesUpload from "@/components/study/NotesUpload";
 import StudyToolbar from "@/components/study/StudyToolbar";
@@ -78,8 +78,25 @@ export default function StudyPanel({ character }: StudyPanelProps) {
   const [error, setError] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const notesSaveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const filesSaveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  // Per-session save queue. Two saves to the same session (e.g. the immediate
+  // attach save and the upload-completion save that adds storagePath) are
+  // separate, un-awaited network requests — nothing stops the slower one from
+  // landing last and silently overwriting the newer data. Chaining onto the
+  // previous promise for that session id forces writes to land in the order
+  // they were issued, regardless of individual request latency.
+  const saveQueueRef = useRef<Map<string, Promise<void>>>(new Map());
+
+  function queueSessionSave(session: StudySession): Promise<void> {
+    const previous = saveQueueRef.current.get(session.id) ?? Promise.resolve();
+    const next = previous.catch(() => {}).then(() =>
+      saveStudySession(session)
+        .then(() => setStorageError(null))
+        .catch(() => setStorageError(STORAGE_SAVE_ERROR))
+    );
+    saveQueueRef.current.set(session.id, next);
+    return next;
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -101,7 +118,7 @@ export default function StudyPanel({ character }: StudyPanelProps) {
           const nextNumber = await nextStudyNumber(character.id);
           if (cancelled) return;
           const fresh = createStudySession(character.id, `New study ${nextNumber}`);
-          await saveStudySession(fresh);
+          await queueSessionSave(fresh);
           if (cancelled) return;
           setSessions([fresh, ...existingSessions]);
           setActiveSessionId(fresh.id);
@@ -133,9 +150,7 @@ export default function StudyPanel({ character }: StudyPanelProps) {
       if (index === -1 || current[index].notes === text) return current;
 
       const updated: StudySession = { ...current[index], notes: text, updatedAt: Date.now() };
-      saveStudySession(updated)
-        .then(() => setStorageError(null))
-        .catch(() => setStorageError(STORAGE_SAVE_ERROR));
+      queueSessionSave(updated);
       const next = [...current];
       next[index] = updated;
       return next;
@@ -148,27 +163,38 @@ export default function StudyPanel({ character }: StudyPanelProps) {
       if (index === -1) return current;
 
       const updated: StudySession = { ...current[index], files: attachments, updatedAt: Date.now() };
-      saveStudySession(updated)
-        .then(() => setStorageError(null))
-        .catch(() => setStorageError(STORAGE_SAVE_ERROR));
+      queueSessionSave(updated);
       const next = [...current];
       next[index] = updated;
       return next;
     });
   }
 
+  // Unlike notes (a keystroke stream, worth debouncing), file-list changes are
+  // discrete one-off events — attach, upload finishing, download finishing,
+  // remove. Debouncing them opened a race: the "saving…" badge in NotesUpload
+  // clears as soon as the in-memory merge happens, before the debounced write
+  // actually reached the database, so a reload shortly after made a file with
+  // a real storagePath in the bucket look permanently "needs re-attaching".
+  // Saving immediately closes that window.
+  const handleFilesChange = useCallback(
+    (update: StudyFile[] | ((prev: StudyFile[]) => StudyFile[])) => {
+      setFiles((prev) => {
+        const newFiles = typeof update === "function" ? update(prev) : update;
+        persistFiles(activeSessionId, newFiles);
+        return newFiles;
+      });
+    },
+    [activeSessionId]
+  );
+
   function flushPendingSaves() {
     if (notesSaveTimeout.current) {
       clearTimeout(notesSaveTimeout.current);
       notesSaveTimeout.current = null;
     }
-    if (filesSaveTimeout.current) {
-      clearTimeout(filesSaveTimeout.current);
-      filesSaveTimeout.current = null;
-    }
     if (activeSessionId) {
       persistNotes(activeSessionId, notes);
-      persistFiles(activeSessionId, files);
     }
   }
 
@@ -184,18 +210,6 @@ export default function StudyPanel({ character }: StudyPanelProps) {
     }, SAVE_DELAY);
   }
 
-  function handleFilesChange(newFiles: StudyFile[]) {
-    setFiles(newFiles);
-    if (filesSaveTimeout.current) {
-      clearTimeout(filesSaveTimeout.current);
-    }
-    const sessionId = activeSessionId;
-    filesSaveTimeout.current = setTimeout(() => {
-      filesSaveTimeout.current = null;
-      persistFiles(sessionId, newFiles);
-    }, SAVE_DELAY);
-  }
-
   function appendResult(result: StudyResult) {
     setSessions((current) => {
       const index = current.findIndex((s) => s.id === activeSessionId);
@@ -208,9 +222,7 @@ export default function StudyPanel({ character }: StudyPanelProps) {
         results: [...current[index].results, result],
         updatedAt: Date.now(),
       };
-      saveStudySession(updated)
-        .then(() => setStorageError(null))
-        .catch(() => setStorageError(STORAGE_SAVE_ERROR));
+      queueSessionSave(updated);
       const next = [...current];
       next[index] = updated;
       return next;
@@ -297,9 +309,7 @@ export default function StudyPanel({ character }: StudyPanelProps) {
     setFiles(fresh.files);
     setError(null);
 
-    saveStudySession(fresh)
-      .then(() => setStorageError(null))
-      .catch(() => setStorageError(STORAGE_SAVE_ERROR));
+    queueSessionSave(fresh);
   }
 
   function handleSelectSession(sessionId: string) {
@@ -319,13 +329,12 @@ export default function StudyPanel({ character }: StudyPanelProps) {
     const renamed: StudySession = { ...target, title: newTitle };
     setSessions((current) => current.map((s) => (s.id === sessionId ? renamed : s)));
 
-    saveStudySession(renamed)
-      .then(() => setStorageError(null))
-      .catch(() => setStorageError(STORAGE_SAVE_ERROR));
+    queueSessionSave(renamed);
   }
 
   async function handleDeleteSession(sessionId: string) {
     const remaining = sessions.filter((s) => s.id !== sessionId);
+    saveQueueRef.current.delete(sessionId);
 
     deleteStudySession(sessionId)
       .then(() => setStorageError(null))
@@ -339,10 +348,6 @@ export default function StudyPanel({ character }: StudyPanelProps) {
     if (notesSaveTimeout.current) {
       clearTimeout(notesSaveTimeout.current);
       notesSaveTimeout.current = null;
-    }
-    if (filesSaveTimeout.current) {
-      clearTimeout(filesSaveTimeout.current);
-      filesSaveTimeout.current = null;
     }
 
     if (remaining.length > 0) {
@@ -359,9 +364,7 @@ export default function StudyPanel({ character }: StudyPanelProps) {
         setActiveSessionId(fresh.id);
         setNotes(fresh.notes);
         setFiles(fresh.files);
-        saveStudySession(fresh)
-          .then(() => setStorageError(null))
-          .catch(() => setStorageError(STORAGE_SAVE_ERROR));
+        queueSessionSave(fresh);
       } catch {
         setSessions([]);
         setActiveSessionId("");
@@ -439,6 +442,7 @@ export default function StudyPanel({ character }: StudyPanelProps) {
         <div className="flex-1 overflow-y-auto px-4 py-8">
           <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
             <NotesUpload
+              sessionId={activeSessionId}
               notes={notes}
               onNotesChange={handleNotesChange}
               files={files}
