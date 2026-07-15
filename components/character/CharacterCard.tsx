@@ -38,7 +38,7 @@ export default function CharacterCard({ character, onDelete, accent = "sky" }: C
   }
 
   const personalityPreview = [
-    ...character.personality,
+    ...character.personality.map((trait) => t(`characterForm.personality.${trait}`)),
     ...(character.personalityOther ? [character.personalityOther] : []),
   ].join(", ");
 
