@@ -4,10 +4,12 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Logo from "@/components/Logo";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 import CharacterCard from "@/components/character/CharacterCard";
 import LoadingBar from "@/components/LoadingBar";
 import ImportLocalDataDialog from "@/components/ImportLocalDataDialog";
 import { useAuth } from "@/components/AuthProvider";
+import { useTranslation } from "@/lib/i18n/LocaleProvider";
 import { createClient } from "@/lib/supabase/client";
 import {
   deleteCharacter,
@@ -28,6 +30,7 @@ function truncateName(name: string): string {
 
 export default function Home() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { user, username, isLoading: authLoading } = useAuth();
   const [characters, setCharacters] = useState<Character[]>([]);
   const [charactersLoading, setCharactersLoading] = useState(true);
@@ -50,7 +53,7 @@ export default function Home() {
       })
       .catch(() => {
         if (cancelled) return;
-        setError("Couldn't load your characters. Please check your connection and try again.");
+        setError(t("home.loadError"));
       })
       .finally(() => {
         if (!cancelled) setCharactersLoading(false);
@@ -85,7 +88,7 @@ export default function Home() {
       await deleteCharacter(id);
     } catch {
       setCharacters(previous);
-      setError("Couldn't delete that character. Please check your connection and try again.");
+      setError(t("home.deleteError"));
     }
   }
 
@@ -120,34 +123,41 @@ export default function Home() {
           <h1 className="text-4xl sm:text-5xl">
             <Logo />
           </h1>
-          <p className="mt-2 text-lg text-muted">Your character, your story</p>
+          <p className="mt-2 text-lg text-muted">{t("common.tagline")}</p>
         </div>
         <div className="flex w-full flex-col gap-4 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
+          {authLoading && <LanguageSwitcher />}
           {!authLoading && (
             <>
               {user ? (
                 <div className="flex w-full items-center justify-between gap-3 sm:w-auto sm:justify-start">
-                  <span
-                    className="min-w-0 max-w-[240px] truncate text-base text-muted"
-                    title={displayName}
-                  >
-                    Hi {truncateName(displayName)}!
-                  </span>
+                  <div className="flex min-w-0 items-center gap-3">
+                    <LanguageSwitcher />
+                    <span
+                      className="min-w-0 max-w-[240px] truncate text-base text-muted"
+                      title={displayName}
+                    >
+                      {t("home.greeting", { name: truncateName(displayName) })}
+                    </span>
+                  </div>
                   <button
                     type="button"
                     onClick={handleLogout}
                     className="shrink-0 rounded-full border-2 border-line px-5 py-2.5 text-base font-medium text-ink transition-colors hover:bg-line/40"
                   >
-                    Log out
+                    {t("home.logOut")}
                   </button>
                 </div>
               ) : (
-                <Link
-                  href="/login"
-                  className="w-full rounded-full border-2 border-ink bg-paper px-5 py-2.5 text-center text-base font-medium text-ink transition-colors hover:bg-line/40 sm:w-auto"
-                >
-                  Log in
-                </Link>
+                <>
+                  <LanguageSwitcher />
+                  <Link
+                    href="/login"
+                    className="w-full rounded-full border-2 border-ink bg-paper px-5 py-2.5 text-center text-base font-medium text-ink transition-colors hover:bg-line/40 sm:w-auto"
+                  >
+                    {t("home.logIn")}
+                  </Link>
+                </>
               )}
             </>
           )}
@@ -156,7 +166,7 @@ export default function Home() {
               href="/create"
               className="w-full shrink-0 rounded-full bg-ink px-5 py-2.5 text-center text-base font-medium text-paper transition-opacity hover:opacity-90 sm:w-auto"
             >
-              New Character
+              {t("home.newCharacter")}
             </Link>
           )}
         </div>
@@ -170,24 +180,21 @@ export default function Home() {
 
       {showBanner && (
         <div className="flex flex-col items-start gap-3 rounded-2xl border-2 border-line bg-sky/20 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-base text-ink">
-            You&apos;re not signed in — your characters are saved on this device only. Sign in
-            to keep them safe and use them anywhere.
-          </p>
+          <p className="text-base text-ink">{t("home.signInNotice")}</p>
           <div className="flex shrink-0 items-center gap-4">
             <Link
               href="/login"
               className="rounded-full border-2 border-ink bg-paper px-4 py-2 text-sm font-medium text-ink transition-colors hover:bg-line/40"
             >
-              Log in
+              {t("home.logIn")}
             </Link>
             <button
               type="button"
               onClick={dismissBanner}
-              aria-label="Dismiss"
+              aria-label={t("home.dismiss")}
               className="text-sm font-medium text-muted transition-colors hover:text-ink"
             >
-              Dismiss
+              {t("home.dismiss")}
             </button>
           </div>
         </div>
@@ -198,16 +205,16 @@ export default function Home() {
           <div className="w-full max-w-xs">
             <LoadingBar active accent="star" />
           </div>
-          <p className="text-base text-muted">Loading your characters...</p>
+          <p className="text-base text-muted">{t("home.loadingCharacters")}</p>
         </div>
       ) : characters.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-5 rounded-3xl border-2 border-dashed border-line py-24 text-center">
-          <p className="text-xl font-bold text-ink">Create your own character now!</p>
+          <p className="text-xl font-bold text-ink">{t("home.emptyStateTitle")}</p>
           <Link
             href="/create"
             className="rounded-full bg-ink px-5 py-2.5 text-base font-medium text-paper transition-opacity hover:opacity-90"
           >
-            New Character
+            {t("home.newCharacter")}
           </Link>
         </div>
       ) : (

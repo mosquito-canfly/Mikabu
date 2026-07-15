@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "@/lib/i18n/LocaleProvider";
 
 interface ChatInputProps {
   onSend: (text: string) => void;
@@ -9,6 +10,7 @@ interface ChatInputProps {
 }
 
 export default function ChatInput({ onSend, onStop, isLoading }: ChatInputProps) {
+  const { t } = useTranslation();
   const [value, setValue] = useState("");
 
   function handleSend() {
@@ -33,7 +35,7 @@ export default function ChatInput({ onSend, onStop, isLoading }: ChatInputProps)
         disabled={isLoading}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="Type a message..."
+        placeholder={t("chat.placeholder")}
         className="max-h-40 flex-1 resize-none rounded-2xl border-2 border-line bg-paper px-3.5 py-2.5 text-base text-ink placeholder:text-muted transition-colors focus-visible:outline-none focus-visible:border-star focus-visible:ring-2 focus-visible:ring-star disabled:cursor-not-allowed disabled:opacity-60"
       />
       {isLoading ? (
@@ -42,7 +44,7 @@ export default function ChatInput({ onSend, onStop, isLoading }: ChatInputProps)
           onClick={onStop}
           className="rounded-full bg-ink px-5 py-2.5 text-base font-medium text-paper transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-star"
         >
-          Stop
+          {t("common.stop")}
         </button>
       ) : (
         <button
@@ -51,7 +53,7 @@ export default function ChatInput({ onSend, onStop, isLoading }: ChatInputProps)
           disabled={value.trim().length === 0}
           className="rounded-full bg-star px-5 py-2.5 text-base font-medium text-ink transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-star disabled:cursor-not-allowed disabled:bg-line disabled:text-muted"
         >
-          Send
+          {t("chat.send")}
         </button>
       )}
     </div>

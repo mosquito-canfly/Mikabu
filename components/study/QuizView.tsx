@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "@/lib/i18n/LocaleProvider";
 import type { QuizQuestion } from "@/lib/types";
 
 interface QuizViewProps {
@@ -8,6 +9,7 @@ interface QuizViewProps {
 }
 
 export default function QuizView({ questions }: QuizViewProps) {
+  const { t } = useTranslation();
   const [answers, setAnswers] = useState<Record<number, number>>({});
 
   function handleSelect(questionIndex: number, optionIndex: number) {
@@ -71,7 +73,7 @@ export default function QuizView({ questions }: QuizViewProps) {
 
       {allAnswered && (
         <p className="w-fit self-center rounded-full bg-sky px-5 py-2 text-center text-lg font-bold text-ink">
-          {score} / {questions.length} correct
+          {t("study.quizScore", { score, total: questions.length })}
         </p>
       )}
     </div>

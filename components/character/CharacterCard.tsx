@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useTranslation } from "@/lib/i18n/LocaleProvider";
 import type { Character } from "@/lib/types";
 
 interface CharacterCardProps {
@@ -18,6 +19,7 @@ function truncate(text: string, length: number): string {
 
 export default function CharacterCard({ character, onDelete, accent = "sky" }: CharacterCardProps) {
   const router = useRouter();
+  const { t } = useTranslation();
 
   function handleCardClick() {
     router.push(`/chat/${character.id}`);
@@ -62,7 +64,7 @@ export default function CharacterCard({ character, onDelete, accent = "sky" }: C
         onClick={handleDelete}
         className="absolute right-3 top-3 rounded-full px-2.5 py-1 text-sm font-medium text-muted transition-colors hover:bg-red-50 hover:text-red-600"
       >
-        Delete
+        {t("common.delete")}
       </button>
     </div>
   );

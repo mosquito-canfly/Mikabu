@@ -6,13 +6,16 @@ import Link from "next/link";
 import ChatWindow from "@/components/chat/ChatWindow";
 import StudyPanel from "@/components/study/StudyPanel";
 import ModeToggle, { type Mode } from "@/components/ModeToggle";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useAuth } from "@/components/AuthProvider";
+import { useTranslation } from "@/lib/i18n/LocaleProvider";
 import { getCharacter } from "@/lib/storage";
 import type { Character } from "@/lib/types";
 
 export default function CharacterPage() {
   const params = useParams<{ characterId: string }>();
   const { user, isLoading: authLoading } = useAuth();
+  const { t } = useTranslation();
   const [character, setCharacter] = useState<Character | null | undefined>(undefined);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>("chat");
@@ -31,7 +34,7 @@ export default function CharacterPage() {
       })
       .catch(() => {
         if (cancelled) return;
-        setLoadError("Couldn't load this character. Please check your connection and try again.");
+        setLoadError(t("characterPage.loadError"));
         setCharacter(null);
       });
 
@@ -48,14 +51,14 @@ export default function CharacterPage() {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center gap-3 bg-paper px-4 text-center">
         <h1 className="text-3xl font-bold text-ink">
-          {loadError ? "Something went wrong" : "Character not found"}
+          {loadError ? t("characterPage.errorTitle") : t("characterPage.notFoundTitle")}
         </h1>
         {loadError && <p className="text-base text-muted">{loadError}</p>}
         <Link
           href="/"
           className="text-base font-medium text-muted underline underline-offset-4 transition-colors hover:text-ink"
         >
-          Back home
+          {t("common.backHome")}
         </Link>
       </main>
     );
@@ -68,12 +71,13 @@ export default function CharacterPage() {
           href="/"
           className="shrink-0 text-base font-medium text-muted underline underline-offset-4 transition-colors hover:text-ink"
         >
-          ← Back
+          {t("common.back")}
         </Link>
         <h1 className="min-w-0 flex-1 truncate text-xl font-bold text-ink">{character.name}</h1>
         <div className="shrink-0">
           <ModeToggle mode={mode} onChange={setMode} />
         </div>
+        <LanguageSwitcher />
       </header>
 
       <div className="flex min-h-0 flex-1 flex-col">

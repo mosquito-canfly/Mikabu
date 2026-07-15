@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "@/lib/i18n/LocaleProvider";
 import type { Character } from "@/lib/types";
 
 type CharacterFormData = Omit<Character, "id" | "createdAt">;
@@ -9,10 +10,15 @@ interface CharacterFormProps {
   onSubmit: (data: CharacterFormData) => void;
 }
 
-const GENDER_OPTIONS: { label: string; value: Character["gender"] }[] = [
-  { label: "Male", value: "male" },
-  { label: "Female", value: "female" },
-  { label: "Other", value: "other" },
+// Values stored on the Character (and sent to the AI prompt builder) are
+// always these canonical English words, regardless of UI language — only
+// the displayed chip label is translated. Changing the stored value with
+// locale would alter what the AI prompt describes and break matching
+// against previously saved characters.
+const GENDER_OPTIONS: { labelKey: string; value: Character["gender"] }[] = [
+  { labelKey: "characterForm.genderMale", value: "male" },
+  { labelKey: "characterForm.genderFemale", value: "female" },
+  { labelKey: "characterForm.genderOther", value: "other" },
 ];
 
 const PERSONALITY_OPTIONS = [
@@ -93,6 +99,7 @@ const inputClasses =
 const labelClasses = "text-lg font-medium text-ink";
 
 export default function CharacterForm({ onSubmit }: CharacterFormProps) {
+  const { t } = useTranslation();
   const [name, setName] = useState("");
   const [gender, setGender] = useState<"" | Character["gender"]>("");
   const [genderOther, setGenderOther] = useState("");
@@ -165,7 +172,7 @@ export default function CharacterForm({ onSubmit }: CharacterFormProps) {
       {/* Name */}
       <div className="flex flex-col gap-2">
         <label htmlFor="name" className={labelClasses}>
-          Name <RequiredMark />
+          {t("characterForm.nameLabel")} <RequiredMark />
         </label>
         <input
           id="name"
@@ -180,13 +187,13 @@ export default function CharacterForm({ onSubmit }: CharacterFormProps) {
       {/* Gender */}
       <div className="flex flex-col gap-2">
         <label className={labelClasses}>
-          Gender <RequiredMark />
+          {t("characterForm.genderLabel")} <RequiredMark />
         </label>
         <div className="flex flex-wrap gap-2">
           {GENDER_OPTIONS.map((option) => (
             <Chip
               key={option.value}
-              label={option.label}
+              label={t(option.labelKey)}
               selected={gender === option.value}
               onClick={() => setGender(option.value)}
             />
@@ -195,7 +202,7 @@ export default function CharacterForm({ onSubmit }: CharacterFormProps) {
         {gender === "other" && (
           <input
             type="text"
-            placeholder="Please specify"
+            placeholder={t("characterForm.pleaseSpecify")}
             value={genderOther}
             onChange={(e) => setGenderOther(e.target.value)}
             className={inputClasses}
@@ -206,7 +213,7 @@ export default function CharacterForm({ onSubmit }: CharacterFormProps) {
       {/* Age */}
       <div className="flex flex-col gap-2">
         <label htmlFor="age" className={labelClasses}>
-          Age <RequiredMark />
+          {t("characterForm.ageLabel")} <RequiredMark />
         </label>
         <input
           id="age"
@@ -223,19 +230,19 @@ export default function CharacterForm({ onSubmit }: CharacterFormProps) {
       {/* Personality */}
       <div className="flex flex-col gap-2">
         <label className={labelClasses}>
-          Personality <RequiredMark />
+          {t("characterForm.personalityLabel")} <RequiredMark />
         </label>
         <div className="flex flex-wrap gap-2">
           {PERSONALITY_OPTIONS.map((option) => (
             <Chip
               key={option}
-              label={option}
+              label={t(`characterForm.personality.${option}`)}
               selected={personality.includes(option)}
               onClick={() => setPersonality((prev) => toggleInList(prev, option))}
             />
           ))}
           <Chip
-            label="Other"
+            label={t("characterForm.otherOption")}
             selected={personalityOtherActive}
             onClick={() => setPersonalityOtherActive((prev) => !prev)}
           />
@@ -243,7 +250,7 @@ export default function CharacterForm({ onSubmit }: CharacterFormProps) {
         {personalityOtherActive && (
           <input
             type="text"
-            placeholder="Describe other traits"
+            placeholder={t("characterForm.personalityOtherPlaceholder")}
             value={personalityOther}
             onChange={(e) => setPersonalityOther(e.target.value)}
             className={inputClasses}
@@ -254,7 +261,7 @@ export default function CharacterForm({ onSubmit }: CharacterFormProps) {
       {/* Occupation */}
       <div className="flex flex-col gap-2">
         <label htmlFor="occupation" className={labelClasses}>
-          Occupation <RequiredMark />
+          {t("characterForm.occupationLabel")} <RequiredMark />
         </label>
         <input
           id="occupation"
@@ -269,9 +276,9 @@ export default function CharacterForm({ onSubmit }: CharacterFormProps) {
       {/* Relationship */}
       <div className="flex flex-col gap-2">
         <label htmlFor="relationship" className={labelClasses}>
-          Relationship <RequiredMark />
+          {t("characterForm.relationshipLabel")} <RequiredMark />
         </label>
-        <p className="text-sm text-muted">Who is this character to you?</p>
+        <p className="text-sm text-muted">{t("characterForm.relationshipHelper")}</p>
         <input
           id="relationship"
           type="text"
@@ -285,9 +292,9 @@ export default function CharacterForm({ onSubmit }: CharacterFormProps) {
       {/* Setting World */}
       <div className="flex flex-col gap-2">
         <label htmlFor="setting" className={labelClasses}>
-          Setting World <RequiredMark />
+          {t("characterForm.settingLabel")} <RequiredMark />
         </label>
-        <p className="text-sm text-muted">Where does the character usually live in?</p>
+        <p className="text-sm text-muted">{t("characterForm.settingHelper")}</p>
         <input
           id="setting"
           type="text"
@@ -301,13 +308,13 @@ export default function CharacterForm({ onSubmit }: CharacterFormProps) {
       {/* Speaking Style */}
       <div className="flex flex-col gap-2">
         <label className={labelClasses}>
-          Speaking Style <RequiredMark />
+          {t("characterForm.speakingStyleLabel")} <RequiredMark />
         </label>
         <div className="flex flex-wrap gap-2">
           {SPEAKING_STYLE_OPTIONS.map((option) => (
             <Chip
               key={option}
-              label={option}
+              label={t(`characterForm.speakingStyle.${option}`)}
               selected={speakingStyle.includes(option)}
               onClick={() =>
                 setSpeakingStyle((prev) => toggleInList(prev, option))
@@ -315,7 +322,7 @@ export default function CharacterForm({ onSubmit }: CharacterFormProps) {
             />
           ))}
           <Chip
-            label="Other"
+            label={t("characterForm.otherOption")}
             selected={speakingStyleOtherActive}
             onClick={() => setSpeakingStyleOtherActive((prev) => !prev)}
           />
@@ -323,7 +330,7 @@ export default function CharacterForm({ onSubmit }: CharacterFormProps) {
         {speakingStyleOtherActive && (
           <input
             type="text"
-            placeholder="Describe other speaking style"
+            placeholder={t("characterForm.speakingStyleOtherPlaceholder")}
             value={speakingStyleOther}
             onChange={(e) => setSpeakingStyleOther(e.target.value)}
             className={inputClasses}
@@ -334,12 +341,12 @@ export default function CharacterForm({ onSubmit }: CharacterFormProps) {
       {/* Additional Information */}
       <div className="flex flex-col gap-2">
         <label htmlFor="additionalInfo" className={labelClasses}>
-          Additional Information
+          {t("characterForm.additionalInfoLabel")}
         </label>
         <textarea
           id="additionalInfo"
           rows={5}
-          placeholder="Anything else worth knowing (optional)"
+          placeholder={t("characterForm.additionalInfoPlaceholder")}
           value={additionalInfo}
           onChange={(e) => setAdditionalInfo(e.target.value)}
           className={inputClasses}
@@ -351,7 +358,7 @@ export default function CharacterForm({ onSubmit }: CharacterFormProps) {
         disabled={!isFormValid}
         className="mt-2 rounded-full bg-ink px-4 py-2.5 text-base font-medium text-paper transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:bg-line disabled:text-muted disabled:opacity-100"
       >
-        Create Character
+        {t("characterForm.submit")}
       </button>
     </form>
   );

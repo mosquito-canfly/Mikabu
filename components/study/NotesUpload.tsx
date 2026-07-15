@@ -2,11 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
+import { useTranslation } from "@/lib/i18n/LocaleProvider";
 import {
   deleteStudyFile,
   downloadStudyFile,
   isQuotaError,
-  STORAGE_QUOTA_MESSAGE,
   uploadStudyFile,
 } from "@/lib/storage/files";
 import type { StudyFile } from "@/lib/types";
@@ -24,6 +24,8 @@ interface NotesUploadProps {
 const ACCEPTED_MIME_TYPES = ["application/pdf", "image/png", "image/jpeg", "image/webp"];
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
+// File-format abbreviations — kept as-is in both languages, the same way
+// "PDF" and "PNG" are used unchanged in Chinese technical UI.
 const FILE_TYPE_LABELS: Record<string, string> = {
   "application/pdf": "PDF",
   "image/png": "PNG",
@@ -51,6 +53,7 @@ export default function NotesUpload({
   onFilesChange,
 }: NotesUploadProps) {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [isDragging, setIsDragging] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
@@ -111,11 +114,11 @@ export default function NotesUpload({
 
     for (const file of Array.from(fileList)) {
       if (!ACCEPTED_MIME_TYPES.includes(file.type)) {
-        rejected.push(`${file.name} (unsupported file type)`);
+        rejected.push(`${file.name} (${t("study.reasonUnsupportedType")})`);
         continue;
       }
       if (file.size > MAX_FILE_SIZE) {
-        rejected.push(`${file.name} (over 10MB)`);
+        rejected.push(`${file.name} (${t("study.reasonTooLarge")})`);
         continue;
       }
 
@@ -129,7 +132,7 @@ export default function NotesUpload({
           data,
         });
       } catch {
-        rejected.push(`${file.name} (couldn't be read)`);
+        rejected.push(`${file.name} (${t("study.reasonUnreadable")})`);
       }
     }
 
@@ -155,9 +158,7 @@ export default function NotesUpload({
             .catch((err) => {
               console.error(`Failed to upload study file ${file.name} to storage:`, err);
               setFileError(
-                isQuotaError(err)
-                  ? STORAGE_QUOTA_MESSAGE
-                  : `Couldn't save ${file.name} to your account, but it'll still work for this session.`
+                isQuotaError(err) ? t("study.quotaMessage") : t("study.uploadFailed", { name: file.name })
               );
             })
             .finally(() => clearPending(file.id));
@@ -165,7 +166,7 @@ export default function NotesUpload({
       }
     }
     if (rejected.length > 0) {
-      setFileError(`Couldn't attach: ${rejected.join(", ")}`);
+      setFileError(t("study.attachRejected", { items: rejected.join(", ") }));
     }
   }
 
@@ -188,12 +189,12 @@ export default function NotesUpload({
   return (
     <div className="flex flex-col gap-2">
       <label htmlFor="study-notes" className="text-lg font-medium text-ink">
-        Study Notes
+        {t("study.notesLabel")}
       </label>
       <textarea
         id="study-notes"
         rows={12}
-        placeholder="Paste your study notes here..."
+        placeholder={t("study.notesPlaceholder")}
         value={notes}
         onChange={(e) => onNotesChange(e.target.value)}
         className="rounded-2xl border-2 border-line bg-paper px-4 py-2.5 text-base text-ink placeholder:text-muted transition-colors focus-visible:outline-none focus-visible:border-sky focus-visible:ring-2 focus-visible:ring-sky"
@@ -210,13 +211,13 @@ export default function NotesUpload({
           isDragging ? "border-sky bg-sky/20" : "border-line bg-paper"
         }`}
       >
-        <p className="text-sm text-ink">Drag files here, or</p>
+        <p className="text-sm text-ink">{t("study.dragFiles")}</p>
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
           className="rounded-full bg-sky px-4 py-2 text-sm font-medium text-ink transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky"
         >
-          Attach files
+          {t("study.attachFiles")}
         </button>
         <input
           ref={inputRef}
@@ -229,7 +230,7 @@ export default function NotesUpload({
             e.target.value = "";
           }}
         />
-        <p className="text-xs text-muted">PDF or image, up to 10MB each</p>
+        <p className="text-xs text-muted">{t("study.fileHelper")}</p>
       </div>
 
       {fileError && <p className="text-sm text-red-700">{fileError}</p>}
@@ -246,14 +247,14 @@ export default function NotesUpload({
                   needsReattach || isPending ? "border-line bg-line/30 text-muted" : "border-sky bg-sky/20 text-ink"
                 }`}
               >
-                <span className="font-medium">{FILE_TYPE_LABELS[file.mimeType] ?? "FILE"}</span>
+                <span className="font-medium">{FILE_TYPE_LABELS[file.mimeType] ?? t("study.fileTypeFallback")}</span>
                 <span className="max-w-[160px] truncate">{file.name}</span>
-                {isPending && <span className="italic">{file.data ? "saving…" : "loading…"}</span>}
-                {needsReattach && <span className="italic">needs re-attaching</span>}
+                {isPending && <span className="italic">{file.data ? t("study.saving") : t("study.loadingFile")}</span>}
+                {needsReattach && <span className="italic">{t("study.needsReattach")}</span>}
                 <button
                   type="button"
                   onClick={() => handleRemove(file.id)}
-                  aria-label={`Remove ${file.name}`}
+                  aria-label={t("study.removeFile", { name: file.name })}
                   className="rounded-full px-1 text-muted transition-colors hover:bg-ink/10 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky"
                 >
                   ×

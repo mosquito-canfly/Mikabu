@@ -4,20 +4,23 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Logo from "@/components/Logo";
+import { useTranslation } from "@/lib/i18n/LocaleProvider";
 import { createClient } from "@/lib/supabase/client";
-
-function friendlyError(message: string): string {
-  if (message.toLowerCase().includes("invalid login credentials")) {
-    return "Incorrect email or password.";
-  }
-  if (message.toLowerCase().includes("email not confirmed")) {
-    return "Please confirm your email before logging in.";
-  }
-  return message;
-}
 
 export default function LoginPage() {
   const router = useRouter();
+  const { t } = useTranslation();
+
+  function friendlyError(message: string): string {
+    if (message.toLowerCase().includes("invalid login credentials")) {
+      return t("login.errorInvalidCredentials");
+    }
+    if (message.toLowerCase().includes("email not confirmed")) {
+      return t("login.errorEmailNotConfirmed");
+    }
+    return message;
+  }
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -59,13 +62,13 @@ export default function LoginPage() {
         className="flex w-full max-w-sm flex-col gap-5 rounded-3xl border-2 border-line px-6 py-8"
       >
         <div className="flex flex-col gap-1">
-          <h2 className="text-2xl font-bold text-ink">Log in</h2>
-          <p className="text-base text-muted">Welcome back to Mikabu! (๑&gt;ᴗ&lt;๑)</p>
+          <h2 className="text-2xl font-bold text-ink">{t("login.title")}</h2>
+          <p className="text-base text-muted">{t("login.subtitle")}</p>
         </div>
 
         <div className="flex flex-col gap-2">
           <label htmlFor="email" className="text-lg font-medium text-ink">
-            Email
+            {t("auth.email")}
           </label>
           <input
             id="email"
@@ -80,7 +83,7 @@ export default function LoginPage() {
 
         <div className="flex flex-col gap-2">
           <label htmlFor="password" className="text-lg font-medium text-ink">
-            Password
+            {t("auth.password")}
           </label>
           <input
             id="password"
@@ -104,16 +107,16 @@ export default function LoginPage() {
           disabled={!isFormValid || isLoading}
           className="mt-2 rounded-full bg-ink px-4 py-2.5 text-base font-medium text-paper transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:bg-line disabled:text-muted disabled:opacity-100"
         >
-          {isLoading ? "Logging in..." : "Log in"}
+          {isLoading ? t("login.submitting") : t("login.submit")}
         </button>
 
         <p className="text-center text-base text-muted">
-          Don&apos;t have an account?{" "}
+          {t("login.noAccount")}{" "}
           <Link
             href="/signup"
             className="font-medium text-ink underline underline-offset-4 transition-colors hover:text-ink/70"
           >
-            Sign up
+            {t("login.signUpLink")}
           </Link>
         </p>
       </form>

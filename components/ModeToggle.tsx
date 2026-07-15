@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslation } from "@/lib/i18n/LocaleProvider";
+
 export type Mode = "chat" | "study";
 
 interface ModeToggleProps {
@@ -7,12 +9,14 @@ interface ModeToggleProps {
   onChange: (mode: Mode) => void;
 }
 
-const MODES: { label: string; value: Mode; accent: "star" | "sky" }[] = [
-  { label: "Chat", value: "chat", accent: "star" },
-  { label: "Study", value: "study", accent: "sky" },
+const MODES: { labelKey: string; value: Mode; accent: "star" | "sky" }[] = [
+  { labelKey: "characterPage.modeChat", value: "chat", accent: "star" },
+  { labelKey: "characterPage.modeStudy", value: "study", accent: "sky" },
 ];
 
 export default function ModeToggle({ mode, onChange }: ModeToggleProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="flex items-center gap-1 rounded-full border-2 border-line bg-paper p-1">
       {MODES.map((option) => {
@@ -29,7 +33,7 @@ export default function ModeToggle({ mode, onChange }: ModeToggleProps) {
                 : "text-muted hover:text-ink hover:bg-line/40"
             }`}
           >
-            {option.label}
+            {t(option.labelKey)}
           </button>
         );
       })}

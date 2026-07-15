@@ -7,5 +7,3 @@ export function isOfflineError(error: unknown): boolean {
   if (typeof navigator !== "undefined" && !navigator.onLine) return true;
   return error instanceof TypeError;
 }
-
-export const OFFLINE_MESSAGE = "Mikabu needs an internet connection for this. Please check your connection and try again.";

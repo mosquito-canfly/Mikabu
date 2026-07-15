@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "@/lib/i18n/LocaleProvider";
 
 interface SessionSidebarItem {
   id: string;
@@ -32,6 +33,7 @@ export default function SessionSidebar({
   onRename,
   onDelete,
 }: SessionSidebarProps) {
+  const { t } = useTranslation();
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -85,7 +87,7 @@ export default function SessionSidebar({
                 }}
                 onDelete={() => {
                   setOpenMenuId(null);
-                  if (window.confirm(`Delete "${item.title}"? This cannot be undone.`)) {
+                  if (window.confirm(t("session.deleteConfirm", { title: item.title }))) {
                     onDelete(item.id);
                   }
                 }}
@@ -133,6 +135,7 @@ function SessionRow({
   onSaveRename,
   onDelete,
 }: SessionRowProps) {
+  const { t } = useTranslation();
   const menuRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -218,7 +221,7 @@ function SessionRow({
             ref={menuButtonRef}
             type="button"
             onClick={handleMenuToggle}
-            aria-label="Session options"
+            aria-label={t("session.sessionOptions")}
             className={`rounded-full px-1.5 py-1 text-base leading-none transition-opacity text-ink/70 hover:bg-ink/10 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 ${
               isMenuOpen ? "sm:opacity-100" : ""
             }`}
@@ -238,14 +241,14 @@ function SessionRow({
                 onClick={onStartRename}
                 className="block w-full px-3 py-1.5 text-left text-sm font-medium text-ink hover:bg-line/40"
               >
-                Rename
+                {t("session.rename")}
               </button>
               <button
                 type="button"
                 onClick={onDelete}
                 className="block w-full px-3 py-1.5 text-left text-sm font-medium text-red-600 hover:bg-red-50"
               >
-                Delete
+                {t("session.delete")}
               </button>
             </div>
           )}

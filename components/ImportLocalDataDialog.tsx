@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import LoadingBar from "@/components/LoadingBar";
+import { useTranslation } from "@/lib/i18n/LocaleProvider";
 import {
   clearLocalData,
   dismissImportThisSession,
@@ -25,6 +26,7 @@ export default function ImportLocalDataDialog({
   onDismiss,
   onImported,
 }: ImportLocalDataDialogProps) {
+  const { t } = useTranslation();
   const [phase, setPhase] = useState<Phase>("offer");
   const [progress, setProgress] = useState<ImportProgress | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
@@ -48,7 +50,7 @@ export default function ImportLocalDataDialog({
   }
 
   function handleClearLocal() {
-    if (!window.confirm("Clear the local copy on this device? This can't be undone.")) return;
+    if (!window.confirm(t("import.clearLocalConfirm"))) return;
     clearLocalData();
     setLocalCleared(true);
   }
@@ -57,16 +59,17 @@ export default function ImportLocalDataDialog({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Import your characters"
+      aria-label={t("import.title")}
       className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-4"
     >
       <div className="w-full max-w-sm rounded-3xl border-2 border-line bg-paper p-6 shadow-lg">
         {phase === "offer" && (
           <div className="flex flex-col gap-4">
-            <h2 className="text-2xl font-bold text-ink">Bring your characters with you?</h2>
+            <h2 className="text-2xl font-bold text-ink">{t("import.title")}</h2>
             <p className="text-base text-ink">
-              We found {characterCount} character{characterCount === 1 ? "" : "s"} saved on this
-              device. Import them into your account so you can use them anywhere.
+              {t(characterCount === 1 ? "import.foundCountOne" : "import.foundCountOther", {
+                count: characterCount,
+              })}
             </p>
             <div className="mt-2 flex items-center justify-end gap-3">
               <button
@@ -74,14 +77,14 @@ export default function ImportLocalDataDialog({
                 onClick={handleNotNow}
                 className="rounded-full px-4 py-2.5 text-base font-medium text-muted transition-colors hover:bg-line/40 hover:text-ink"
               >
-                Not now
+                {t("import.notNow")}
               </button>
               <button
                 type="button"
                 onClick={handleImport}
                 className="rounded-full bg-ink px-5 py-2.5 text-base font-medium text-paper transition-opacity hover:opacity-90"
               >
-                Import
+                {t("import.import")}
               </button>
             </div>
           </div>
@@ -89,12 +92,16 @@ export default function ImportLocalDataDialog({
 
         {phase === "importing" && (
           <div className="flex flex-col gap-4">
-            <h2 className="text-2xl font-bold text-ink">Importing...</h2>
+            <h2 className="text-2xl font-bold text-ink">{t("import.importingTitle")}</h2>
             <LoadingBar active accent="sky" />
             <p className="text-sm text-muted">
               {progress
-                ? `${progress.completed} / ${progress.total} — ${progress.label}`
-                : "Getting started..."}
+                ? t("import.progress", {
+                    completed: progress.completed,
+                    total: progress.total,
+                    label: progress.label,
+                  })
+                : t("import.gettingStarted")}
             </p>
           </div>
         )}
@@ -103,24 +110,39 @@ export default function ImportLocalDataDialog({
           <div className="flex flex-col gap-4">
             {result.success ? (
               <>
-                <h2 className="text-2xl font-bold text-ink">All set!</h2>
+                <h2 className="text-2xl font-bold text-ink">{t("import.allSetTitle")}</h2>
                 <p className="text-base text-ink">
-                  Imported {result.importedCharacters} character
-                  {result.importedCharacters === 1 ? "" : "s"}, {result.importedChatSessions} chat
-                  session{result.importedChatSessions === 1 ? "" : "s"}, and{" "}
-                  {result.importedStudySessions} study session
-                  {result.importedStudySessions === 1 ? "" : "s"}.
+                  {t("import.importedSummary", {
+                    characters: t(
+                      result.importedCharacters === 1
+                        ? "import.characterCountOne"
+                        : "import.characterCountOther",
+                      { count: result.importedCharacters }
+                    ),
+                    chats: t(
+                      result.importedChatSessions === 1
+                        ? "import.chatSessionCountOne"
+                        : "import.chatSessionCountOther",
+                      { count: result.importedChatSessions }
+                    ),
+                    studies: t(
+                      result.importedStudySessions === 1
+                        ? "import.studySessionCountOne"
+                        : "import.studySessionCountOther",
+                      { count: result.importedStudySessions }
+                    ),
+                  })}
                 </p>
 
                 {localCleared ? (
-                  <p className="text-sm text-muted">The local copy on this device has been cleared.</p>
+                  <p className="text-sm text-muted">{t("import.localCleared")}</p>
                 ) : (
                   <button
                     type="button"
                     onClick={handleClearLocal}
                     className="self-start rounded-full border-2 border-line px-4 py-2 text-sm font-medium text-ink transition-colors hover:bg-line/40"
                   >
-                    Clear local copy
+                    {t("import.clearLocalCopy")}
                   </button>
                 )}
 
@@ -129,15 +151,13 @@ export default function ImportLocalDataDialog({
                   onClick={onDismiss}
                   className="mt-2 self-end rounded-full bg-ink px-5 py-2.5 text-base font-medium text-paper transition-opacity hover:opacity-90"
                 >
-                  Done
+                  {t("import.done")}
                 </button>
               </>
             ) : (
               <>
-                <h2 className="text-2xl font-bold text-ink">Some items didn&apos;t import</h2>
-                <p className="text-base text-ink">
-                  Your local data is untouched — nothing was lost. This didn&apos;t make it:
-                </p>
+                <h2 className="text-2xl font-bold text-ink">{t("import.someItemsFailedTitle")}</h2>
+                <p className="text-base text-ink">{t("import.untouchedNotice")}</p>
                 <ul className="max-h-32 list-disc overflow-y-auto rounded-2xl border-2 border-line bg-paper px-6 py-3 text-sm text-ink">
                   {result.failedItems.map((item) => (
                     <li key={item}>{item}</li>
@@ -149,14 +169,14 @@ export default function ImportLocalDataDialog({
                     onClick={onDismiss}
                     className="rounded-full px-4 py-2.5 text-base font-medium text-muted transition-colors hover:bg-line/40 hover:text-ink"
                   >
-                    Close
+                    {t("import.close")}
                   </button>
                   <button
                     type="button"
                     onClick={handleImport}
                     className="rounded-full bg-ink px-5 py-2.5 text-base font-medium text-paper transition-opacity hover:opacity-90"
                   >
-                    Try again
+                    {t("common.tryAgain")}
                   </button>
                 </div>
               </>

@@ -14,7 +14,8 @@ import {
   nextStudyNumber,
   saveStudySession,
 } from "@/lib/storage";
-import { isOfflineError, OFFLINE_MESSAGE } from "@/lib/network";
+import { isOfflineError } from "@/lib/network";
+import { useTranslation } from "@/lib/i18n/LocaleProvider";
 import type {
   Character,
   QuizQuestion,
@@ -30,15 +31,15 @@ interface StudyPanelProps {
 
 const SAVE_DELAY = 500;
 
-const TOOL_LABELS: Record<StudyTool, string> = {
-  explain: "Explain",
-  quiz: "Quiz",
-  summary: "Summary",
+// StudyTool values ("explain" / "quiz" / "summary") double as translation
+// keys under the "study" namespace — used both for the toolbar buttons and
+// for the result badges, matching the original's own reuse of one label set
+// for both.
+const TOOL_LABEL_KEYS: Record<StudyTool, string> = {
+  explain: "study.explain",
+  quiz: "study.quiz",
+  summary: "study.summary",
 };
-
-const STORAGE_SAVE_ERROR = "Couldn't save your study session. Please check your connection.";
-const STORAGE_DELETE_ERROR = "Couldn't delete that study session. Please check your connection.";
-const STORAGE_LOAD_ERROR = "Couldn't load your study sessions. Please check your connection and try again.";
 
 function createStudySession(characterId: string, title: string): StudySession {
   const now = Date.now();
@@ -54,7 +55,7 @@ function createStudySession(characterId: string, title: string): StudySession {
   };
 }
 
-const NEW_STUDY_TITLE_PATTERN = /^New study \d+$/;
+const NEW_STUDY_TITLE_PATTERN = /^New study (\d+)$/;
 
 function isStudyBlank(session: StudySession, liveNotes?: string, liveFiles?: StudyFile[]): boolean {
   const notesToCheck = liveNotes ?? session.notes;
@@ -116,6 +117,7 @@ function ensureStudySessionsInitialized(characterId: string): Promise<StudySessi
 }
 
 export default function StudyPanel({ character }: StudyPanelProps) {
+  const { t } = useTranslation();
   const [sessions, setSessions] = useState<StudySession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string>("");
   const [notes, setNotes] = useState("");
@@ -150,7 +152,7 @@ export default function StudyPanel({ character }: StudyPanelProps) {
     const next = previous.catch(() => {}).then(() =>
       saveStudySession(session)
         .then(() => setStorageError(null))
-        .catch(() => setStorageError(STORAGE_SAVE_ERROR))
+        .catch(() => setStorageError(t("study.saveError")))
     );
     saveQueueRef.current.set(session.id, next);
     return next;
@@ -172,7 +174,7 @@ export default function StudyPanel({ character }: StudyPanelProps) {
         setError(null);
       })
       .catch(() => {
-        if (!cancelled) setLoadError(STORAGE_LOAD_ERROR);
+        if (!cancelled) setLoadError(t("study.loadError"));
       })
       .finally(() => {
         if (!cancelled) setSessionsLoading(false);
@@ -185,6 +187,17 @@ export default function StudyPanel({ character }: StudyPanelProps) {
 
   const activeSession = sessions.find((s) => s.id === activeSessionId);
   const sortedSessions = [...sessions].sort((a, b) => b.updatedAt - a.updatedAt);
+  // The stored title stays the English sentinel "New study N" forever,
+  // regardless of UI language — it's matched against NEW_STUDY_TITLE_PATTERN
+  // in isStudyUntouched() and would break that check (and silently orphan
+  // old data) if translated in place. Only the sidebar display is swapped.
+  const displaySessions = sortedSessions.map((session) => {
+    const match = session.title.match(NEW_STUDY_TITLE_PATTERN);
+    return {
+      id: session.id,
+      title: match ? t("study.newStudyLabel", { n: match[1] }) : session.title,
+    };
+  });
   const isNewSessionDisabled = activeSession ? isStudyUntouched(activeSession, notes, files) : false;
   const hasUsableContent = notes.trim().length > 0 || files.some((file) => Boolean(file.data));
   const hasAttachedFiles = files.some((file) => Boolean(file.data));
@@ -293,7 +306,7 @@ export default function StudyPanel({ character }: StudyPanelProps) {
 
       if (!response.ok) {
         const data = await response.json().catch(() => null);
-        throw new Error(data?.error ?? "Something went wrong. Please try again.");
+        throw new Error(data?.error ?? t("study.genericError"));
       }
 
       if (tool === "quiz") {
@@ -321,10 +334,10 @@ export default function StudyPanel({ character }: StudyPanelProps) {
       }
       setError(
         isOfflineError(err)
-          ? OFFLINE_MESSAGE
+          ? t("common.offlineMessage")
           : err instanceof Error
             ? err.message
-            : "Something went wrong. Please try again."
+            : t("study.genericError")
       );
     } finally {
       if (abortControllerRef.current === controller) {
@@ -347,7 +360,7 @@ export default function StudyPanel({ character }: StudyPanelProps) {
     try {
       nextNumber = await nextStudyNumber(character.id);
     } catch {
-      setStorageError(STORAGE_SAVE_ERROR);
+      setStorageError(t("study.saveError"));
       return;
     }
 
@@ -387,7 +400,7 @@ export default function StudyPanel({ character }: StudyPanelProps) {
 
     deleteStudySession(sessionId)
       .then(() => setStorageError(null))
-      .catch(() => setStorageError(STORAGE_DELETE_ERROR));
+      .catch(() => setStorageError(t("study.deleteError")));
 
     if (sessionId !== activeSessionId) {
       setSessions(remaining);
@@ -419,7 +432,7 @@ export default function StudyPanel({ character }: StudyPanelProps) {
         setActiveSessionId("");
         setNotes("");
         setFiles([]);
-        setStorageError(STORAGE_SAVE_ERROR);
+        setStorageError(t("study.saveError"));
       }
     }
 
@@ -432,7 +445,7 @@ export default function StudyPanel({ character }: StudyPanelProps) {
         <div className="w-56">
           <LoadingBar active accent="sky" />
         </div>
-        <p className="text-base text-muted">Loading your study sessions...</p>
+        <p className="text-base text-muted">{t("study.loadingStudySessions")}</p>
       </div>
     );
   }
@@ -446,7 +459,7 @@ export default function StudyPanel({ character }: StudyPanelProps) {
           onClick={() => setRetryToken((n) => n + 1)}
           className="rounded-full bg-ink px-4 py-2 text-base font-medium text-paper transition-opacity hover:opacity-90"
         >
-          Try again
+          {t("common.tryAgain")}
         </button>
       </div>
     );
@@ -457,10 +470,10 @@ export default function StudyPanel({ character }: StudyPanelProps) {
       <SessionDrawer
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
-        items={sortedSessions}
+        items={displaySessions}
         activeId={activeSessionId}
-        newLabel="New study"
-        emptyLabel="No study sessions yet."
+        newLabel={t("study.newSessionButton")}
+        emptyLabel={t("study.emptyLabel")}
         newDisabled={isNewSessionDisabled}
         accent="sky"
         onSelect={handleSelectSession}
@@ -476,7 +489,7 @@ export default function StudyPanel({ character }: StudyPanelProps) {
             onClick={() => setSidebarOpen((open) => !open)}
             className="rounded-full px-3 py-1 text-sm font-medium text-muted transition-colors hover:bg-line/40 hover:text-ink"
           >
-            {sidebarOpen ? "Hide sessions" : "Show sessions"}
+            {sidebarOpen ? t("study.hideSessions") : t("study.showSessions")}
           </button>
         </div>
 
@@ -503,7 +516,7 @@ export default function StudyPanel({ character }: StudyPanelProps) {
                   onClick={handleStop}
                   className="rounded-full bg-ink px-4 py-2 text-base font-medium text-paper transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky"
                 >
-                  Stop
+                  {t("common.stop")}
                 </button>
               )}
             </div>
@@ -511,8 +524,9 @@ export default function StudyPanel({ character }: StudyPanelProps) {
 
             {isLoading && (
               <p className="text-base text-muted">
-                {character.name} is working on it
-                {hasAttachedFiles ? " — reading your files may take a little longer" : ""}...
+                {t(hasAttachedFiles ? "study.workingOnItWithFiles" : "study.workingOnIt", {
+                  name: character.name,
+                })}
               </p>
             )}
 
@@ -525,7 +539,7 @@ export default function StudyPanel({ character }: StudyPanelProps) {
             {activeSession?.results.map((result) => (
               <div key={result.id} className="flex flex-col gap-3 rounded-3xl border-2 border-line bg-sky/25 p-4">
                 <span className="w-fit rounded-full bg-sky px-3 py-1 text-sm font-medium text-ink">
-                  {TOOL_LABELS[result.tool]}
+                  {t(TOOL_LABEL_KEYS[result.tool])}
                 </span>
 
                 {result.tool === "quiz" ? (

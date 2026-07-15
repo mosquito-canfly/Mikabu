@@ -6,7 +6,8 @@ import ChatInput from "@/components/chat/ChatInput";
 import SessionDrawer, { MOBILE_QUERY } from "@/components/SessionDrawer";
 import LoadingBar from "@/components/LoadingBar";
 import { deleteSession, getSessionsForCharacter, saveSession } from "@/lib/storage";
-import { isOfflineError, OFFLINE_MESSAGE } from "@/lib/network";
+import { isOfflineError } from "@/lib/network";
+import { useTranslation } from "@/lib/i18n/LocaleProvider";
 import type { Character, ChatSession, Message } from "@/lib/types";
 
 interface ChatWindowProps {
@@ -41,10 +42,6 @@ function isBlank(session: ChatSession): boolean {
 function isUntouched(session: ChatSession): boolean {
   return isBlank(session) && session.title === NEW_CHAT_TITLE;
 }
-
-const STORAGE_SAVE_ERROR = "Couldn't save your chat. Please check your connection.";
-const STORAGE_DELETE_ERROR = "Couldn't delete that chat. Please check your connection.";
-const STORAGE_LOAD_ERROR = "Couldn't load your chats. Please check your connection and try again.";
 
 // Module-level guard, keyed by character id, shared across every mount of
 // this component — including React StrictMode's dev-only double-invoke and
@@ -95,6 +92,7 @@ function ensureChatSessionsInitialized(characterId: string): Promise<ChatSession
 }
 
 export default function ChatWindow({ character }: ChatWindowProps) {
+  const { t } = useTranslation();
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string>("");
   const [sessionsLoading, setSessionsLoading] = useState(true);
@@ -128,7 +126,7 @@ export default function ChatWindow({ character }: ChatWindowProps) {
         setError(null);
       })
       .catch(() => {
-        if (!cancelled) setLoadError(STORAGE_LOAD_ERROR);
+        if (!cancelled) setLoadError(t("chat.loadError"));
       })
       .finally(() => {
         if (!cancelled) setSessionsLoading(false);
@@ -142,6 +140,14 @@ export default function ChatWindow({ character }: ChatWindowProps) {
   const activeSession = sessions.find((s) => s.id === activeSessionId);
   const messages = activeSession?.messages ?? [];
   const sortedSessions = [...sessions].sort((a, b) => b.updatedAt - a.updatedAt);
+  // The stored title stays the English sentinel "New chat" forever, regardless
+  // of UI language — it's compared against in isUntouched() and would break
+  // that check (and silently orphan old data) if it were translated in place.
+  // Only what's displayed in the sidebar is swapped for the translated label.
+  const displaySessions = sortedSessions.map((session) => ({
+    id: session.id,
+    title: session.title === NEW_CHAT_TITLE ? t("chat.newChatLabel") : session.title,
+  }));
   const isNewSessionDisabled = activeSession ? isUntouched(activeSession) : false;
 
   useEffect(() => {
@@ -159,7 +165,7 @@ export default function ChatWindow({ character }: ChatWindowProps) {
 
     saveSession(updated)
       .then(() => setStorageError(null))
-      .catch(() => setStorageError(STORAGE_SAVE_ERROR));
+      .catch(() => setStorageError(t("chat.saveError")));
   }
 
   async function handleSend(text: string) {
@@ -227,7 +233,7 @@ export default function ChatWindow({ character }: ChatWindowProps) {
       if (controller.signal.aborted || (err instanceof DOMException && err.name === "AbortError")) {
         return;
       }
-      setError(isOfflineError(err) ? OFFLINE_MESSAGE : "Something went wrong, please try again.");
+      setError(isOfflineError(err) ? t("common.offlineMessage") : t("chat.genericError"));
     } finally {
       if (abortControllerRef.current === controller) {
         abortControllerRef.current = null;
@@ -250,7 +256,7 @@ export default function ChatWindow({ character }: ChatWindowProps) {
 
     saveSession(fresh)
       .then(() => setStorageError(null))
-      .catch(() => setStorageError(STORAGE_SAVE_ERROR));
+      .catch(() => setStorageError(t("chat.saveError")));
   }
 
   function handleSelectSession(sessionId: string) {
@@ -267,7 +273,7 @@ export default function ChatWindow({ character }: ChatWindowProps) {
 
     saveSession(renamed)
       .then(() => setStorageError(null))
-      .catch(() => setStorageError(STORAGE_SAVE_ERROR));
+      .catch(() => setStorageError(t("chat.saveError")));
   }
 
   function handleDeleteSession(sessionId: string) {
@@ -275,7 +281,7 @@ export default function ChatWindow({ character }: ChatWindowProps) {
 
     deleteSession(sessionId)
       .then(() => setStorageError(null))
-      .catch(() => setStorageError(STORAGE_DELETE_ERROR));
+      .catch(() => setStorageError(t("chat.deleteError")));
 
     if (sessionId !== activeSessionId) {
       setSessions(remaining);
@@ -292,7 +298,7 @@ export default function ChatWindow({ character }: ChatWindowProps) {
       setActiveSessionId(fresh.id);
       saveSession(fresh)
         .then(() => setStorageError(null))
-        .catch(() => setStorageError(STORAGE_SAVE_ERROR));
+        .catch(() => setStorageError(t("chat.saveError")));
     }
 
     setError(null);
@@ -304,7 +310,7 @@ export default function ChatWindow({ character }: ChatWindowProps) {
         <div className="w-56">
           <LoadingBar active accent="star" />
         </div>
-        <p className="text-base text-muted">Loading your chats...</p>
+        <p className="text-base text-muted">{t("chat.loadingChats")}</p>
       </div>
     );
   }
@@ -318,7 +324,7 @@ export default function ChatWindow({ character }: ChatWindowProps) {
           onClick={() => setRetryToken((n) => n + 1)}
           className="rounded-full bg-ink px-4 py-2 text-base font-medium text-paper transition-opacity hover:opacity-90"
         >
-          Try again
+          {t("common.tryAgain")}
         </button>
       </div>
     );
@@ -329,10 +335,10 @@ export default function ChatWindow({ character }: ChatWindowProps) {
       <SessionDrawer
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
-        items={sortedSessions}
+        items={displaySessions}
         activeId={activeSessionId}
-        newLabel="New chat"
-        emptyLabel="No chats yet."
+        newLabel={t("chat.newChatLabel")}
+        emptyLabel={t("chat.emptyLabel")}
         newDisabled={isNewSessionDisabled}
         accent="star"
         onSelect={handleSelectSession}
@@ -348,7 +354,7 @@ export default function ChatWindow({ character }: ChatWindowProps) {
             onClick={() => setSidebarOpen((open) => !open)}
             className="rounded-full px-3 py-1 text-sm font-medium text-muted transition-colors hover:bg-line/40 hover:text-ink"
           >
-            {sidebarOpen ? "Hide chats" : "Show chats"}
+            {sidebarOpen ? t("chat.hideChats") : t("chat.showChats")}
           </button>
         </div>
 
@@ -362,7 +368,7 @@ export default function ChatWindow({ character }: ChatWindowProps) {
           <div className="mx-auto flex w-full max-w-2xl flex-col gap-3">
             {messages.length === 0 && (
               <p className="text-center text-base text-muted">
-                Say hello to {character.name} to start the conversation.
+                {t("chat.sayHello", { name: character.name })}
               </p>
             )}
 
@@ -373,7 +379,7 @@ export default function ChatWindow({ character }: ChatWindowProps) {
             {isLoading && (
               <div className="flex w-full justify-start">
                 <div className="max-w-[75%] rounded-2xl bg-line/50 px-4 py-2.5 text-base text-muted">
-                  {character.name} is typing...
+                  {t("chat.typing", { name: character.name })}
                 </div>
               </div>
             )}

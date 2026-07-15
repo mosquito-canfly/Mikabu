@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Logo from "@/components/Logo";
 import { useAuth } from "@/components/AuthProvider";
+import { useTranslation } from "@/lib/i18n/LocaleProvider";
 import { createClient } from "@/lib/supabase/client";
 
 const MIN_PASSWORD_LENGTH = 6;
@@ -15,16 +16,6 @@ const inputClasses =
   "rounded-2xl border-2 border-line bg-paper px-4 py-2.5 text-base text-ink placeholder:text-muted transition-colors focus-visible:outline-none focus-visible:border-sky focus-visible:ring-2 focus-visible:ring-sky";
 const labelClasses = "text-lg font-medium text-ink";
 const fieldErrorClasses = "text-sm text-red-700";
-
-function friendlyError(message: string): string {
-  if (message.toLowerCase().includes("already registered")) {
-    return "That email is already in use.";
-  }
-  if (message.toLowerCase().includes("password")) {
-    return "Password must be at least 6 characters.";
-  }
-  return message;
-}
 
 function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -49,7 +40,19 @@ async function insertProfile(
 
 export default function SignupPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { refreshUsername } = useAuth();
+
+  function friendlyError(message: string): string {
+    if (message.toLowerCase().includes("already registered")) {
+      return t("signup.errorEmailInUse");
+    }
+    if (message.toLowerCase().includes("password")) {
+      return t("signup.errorPasswordLength");
+    }
+    return message;
+  }
+
   const [username, setUsername] = useState("");
   const [usernameTouched, setUsernameTouched] = useState(false);
   const [email, setEmail] = useState("");
@@ -87,7 +90,7 @@ export default function SignupPage() {
     }
 
     if (data.user && data.user.identities?.length === 0) {
-      setError("That email is already in use.");
+      setError(t("signup.errorEmailInUse"));
       setIsLoading(false);
       return;
     }
@@ -96,9 +99,7 @@ export default function SignupPage() {
       const profileError = await insertProfile(supabase, data.user.id, trimmedUsername);
 
       if (profileError) {
-        setError(
-          "Your account was created, but we couldn't save your username. You're signed in — you can continue and set it later."
-        );
+        setError(t("signup.errorProfileSaveFailed"));
         setAccountCreated(true);
         setIsLoading(false);
         return;
@@ -122,13 +123,13 @@ export default function SignupPage() {
         className="flex w-full max-w-sm flex-col gap-5 rounded-3xl border-2 border-line px-6 py-8"
       >
         <div className="flex flex-col gap-1">
-          <h2 className="text-2xl font-bold text-ink">Sign up</h2>
-          <p className="text-base text-muted">Let&apos;s create your Mikabu account! (≧▽≦)</p>
+          <h2 className="text-2xl font-bold text-ink">{t("signup.title")}</h2>
+          <p className="text-base text-muted">{t("signup.subtitle")}</p>
         </div>
 
         <div className="flex flex-col gap-2">
           <label htmlFor="username" className={labelClasses}>
-            Username
+            {t("signup.usernameLabel")}
           </label>
           <input
             id="username"
@@ -142,14 +143,14 @@ export default function SignupPage() {
           />
           {usernameTouched && !isUsernameValid && (
             <p className={fieldErrorClasses}>
-              Username must be at least {MIN_USERNAME_LENGTH} characters.
+              {t("signup.usernameError", { min: MIN_USERNAME_LENGTH })}
             </p>
           )}
         </div>
 
         <div className="flex flex-col gap-2">
           <label htmlFor="email" className={labelClasses}>
-            Email
+            {t("auth.email")}
           </label>
           <input
             id="email"
@@ -164,7 +165,7 @@ export default function SignupPage() {
 
         <div className="flex flex-col gap-2">
           <label htmlFor="password" className={labelClasses}>
-            Password
+            {t("auth.password")}
           </label>
           <input
             id="password"
@@ -175,12 +176,12 @@ export default function SignupPage() {
             onChange={(e) => setPassword(e.target.value)}
             className={inputClasses}
           />
-          <p className="text-sm text-muted">At least {MIN_PASSWORD_LENGTH} characters.</p>
+          <p className="text-sm text-muted">{t("signup.passwordHelper", { min: MIN_PASSWORD_LENGTH })}</p>
         </div>
 
         <div className="flex flex-col gap-2">
           <label htmlFor="confirmPassword" className={labelClasses}>
-            Confirm Password
+            {t("auth.confirmPassword")}
           </label>
           <input
             id="confirmPassword"
@@ -193,7 +194,7 @@ export default function SignupPage() {
             className={inputClasses}
           />
           {confirmTouched && confirmPassword.length > 0 && !doPasswordsMatch && (
-            <p className={fieldErrorClasses}>Passwords do not match.</p>
+            <p className={fieldErrorClasses}>{t("signup.passwordMismatch")}</p>
           )}
         </div>
 
@@ -208,7 +209,7 @@ export default function SignupPage() {
             href="/"
             className="mt-2 rounded-full bg-ink px-4 py-2.5 text-center text-base font-medium text-paper transition-opacity hover:opacity-90"
           >
-            Continue to Mikabu
+            {t("signup.continueToApp")}
           </Link>
         ) : (
           <button
@@ -216,17 +217,17 @@ export default function SignupPage() {
             disabled={!isFormValid || isLoading}
             className="mt-2 rounded-full bg-ink px-4 py-2.5 text-base font-medium text-paper transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:bg-line disabled:text-muted disabled:opacity-100"
           >
-            {isLoading ? "Signing up..." : "Sign up"}
+            {isLoading ? t("signup.submitting") : t("signup.submit")}
           </button>
         )}
 
         <p className="text-center text-base text-muted">
-          Already have an account?{" "}
+          {t("signup.alreadyHaveAccount")}{" "}
           <Link
             href="/login"
             className="font-medium text-ink underline underline-offset-4 transition-colors hover:text-ink/70"
           >
-            Log in
+            {t("signup.logInLink")}
           </Link>
         </p>
       </form>

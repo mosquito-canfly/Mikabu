@@ -3,9 +3,6 @@ import type { StudyFile } from "../types";
 
 const BUCKET = "study-files";
 
-export const STORAGE_QUOTA_MESSAGE =
-  "You've hit your storage limit. Delete some old files or study sessions to free up space, then try again.";
-
 let supabaseSingleton: ReturnType<typeof createClient> | null = null;
 
 function getSupabase() {
