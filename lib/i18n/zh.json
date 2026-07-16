@@ -93,6 +93,7 @@
     "pleaseSpecify": "请说明",
     "ageLabel": "年龄",
     "personalityLabel": "性格",
+    "personalityHelper": "最多选择 {max} 个",
     "personalityOtherPlaceholder": "描述其他特质",
     "occupationLabel": "职业",
     "relationshipLabel": "关系",
@@ -100,6 +101,7 @@
     "settingLabel": "所处世界",
     "settingHelper": "这个角色平时生活在哪里？",
     "speakingStyleLabel": "说话风格",
+    "speakingStyleHelper": "最多选择 {max} 个",
     "speakingStyleOtherPlaceholder": "描述其他说话风格",
     "additionalInfoLabel": "补充信息",
     "additionalInfoPlaceholder": "还有什么想补充的（可选）",
@@ -139,6 +141,9 @@
       "Dry humor": "冷幽默",
       "Elegant": "优雅"
     }
+  },
+  "characterCard": {
+    "relationshipLabel": "关系："
   },
   "characterPage": {
     "notFoundTitle": "未找到该角色",

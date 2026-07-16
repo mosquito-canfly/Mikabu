@@ -56,6 +56,9 @@ const SPEAKING_STYLE_OPTIONS = [
   "Elegant",
 ];
 
+const PERSONALITY_MAX = 5;
+const SPEAKING_STYLE_MAX = 3;
+
 function toggleInList(list: string[], value: string): string[] {
   return list.includes(value)
     ? list.filter((item) => item !== value)
@@ -66,6 +69,7 @@ interface ChipProps {
   label: string;
   selected: boolean;
   onClick: () => void;
+  disabled?: boolean;
 }
 
 function RequiredMark() {
@@ -76,16 +80,19 @@ function RequiredMark() {
   );
 }
 
-function Chip({ label, selected, onClick }: ChipProps) {
+function Chip({ label, selected, onClick, disabled = false }: ChipProps) {
   return (
     <button
       type="button"
       onClick={onClick}
+      disabled={disabled}
       aria-pressed={selected}
       className={`rounded-full border-2 px-3.5 py-1.5 text-sm font-medium transition-all active:scale-95 ${
         selected
           ? "border-ink bg-ink text-paper shadow-sm"
-          : "border-line bg-paper text-ink hover:border-ink/50 hover:bg-line/40"
+          : disabled
+            ? "cursor-not-allowed border-line bg-paper text-muted opacity-50"
+            : "border-line bg-paper text-ink hover:border-ink/50 hover:bg-line/40"
       }`}
     >
       {label}
@@ -114,6 +121,9 @@ export default function CharacterForm({ onSubmit }: CharacterFormProps) {
   const [speakingStyleOtherActive, setSpeakingStyleOtherActive] = useState(false);
   const [speakingStyleOther, setSpeakingStyleOther] = useState("");
   const [additionalInfo, setAdditionalInfo] = useState("");
+
+  const personalityCount = personality.length + (personalityOtherActive ? 1 : 0);
+  const speakingStyleCount = speakingStyle.length + (speakingStyleOtherActive ? 1 : 0);
 
   const trimmedName = name.trim();
   const ageNumber = Number(age);
@@ -232,18 +242,26 @@ export default function CharacterForm({ onSubmit }: CharacterFormProps) {
         <label className={labelClasses}>
           {t("characterForm.personalityLabel")} <RequiredMark />
         </label>
+        <p className="text-sm text-muted">
+          {t("characterForm.personalityHelper", { max: PERSONALITY_MAX })}
+        </p>
         <div className="flex flex-wrap gap-2">
-          {PERSONALITY_OPTIONS.map((option) => (
-            <Chip
-              key={option}
-              label={t(`characterForm.personality.${option}`)}
-              selected={personality.includes(option)}
-              onClick={() => setPersonality((prev) => toggleInList(prev, option))}
-            />
-          ))}
+          {PERSONALITY_OPTIONS.map((option) => {
+            const isSelected = personality.includes(option);
+            return (
+              <Chip
+                key={option}
+                label={t(`characterForm.personality.${option}`)}
+                selected={isSelected}
+                disabled={!isSelected && personalityCount >= PERSONALITY_MAX}
+                onClick={() => setPersonality((prev) => toggleInList(prev, option))}
+              />
+            );
+          })}
           <Chip
             label={t("characterForm.otherOption")}
             selected={personalityOtherActive}
+            disabled={!personalityOtherActive && personalityCount >= PERSONALITY_MAX}
             onClick={() => setPersonalityOtherActive((prev) => !prev)}
           />
         </div>
@@ -310,20 +328,28 @@ export default function CharacterForm({ onSubmit }: CharacterFormProps) {
         <label className={labelClasses}>
           {t("characterForm.speakingStyleLabel")} <RequiredMark />
         </label>
+        <p className="text-sm text-muted">
+          {t("characterForm.speakingStyleHelper", { max: SPEAKING_STYLE_MAX })}
+        </p>
         <div className="flex flex-wrap gap-2">
-          {SPEAKING_STYLE_OPTIONS.map((option) => (
-            <Chip
-              key={option}
-              label={t(`characterForm.speakingStyle.${option}`)}
-              selected={speakingStyle.includes(option)}
-              onClick={() =>
-                setSpeakingStyle((prev) => toggleInList(prev, option))
-              }
-            />
-          ))}
+          {SPEAKING_STYLE_OPTIONS.map((option) => {
+            const isSelected = speakingStyle.includes(option);
+            return (
+              <Chip
+                key={option}
+                label={t(`characterForm.speakingStyle.${option}`)}
+                selected={isSelected}
+                disabled={!isSelected && speakingStyleCount >= SPEAKING_STYLE_MAX}
+                onClick={() =>
+                  setSpeakingStyle((prev) => toggleInList(prev, option))
+                }
+              />
+            );
+          })}
           <Chip
             label={t("characterForm.otherOption")}
             selected={speakingStyleOtherActive}
+            disabled={!speakingStyleOtherActive && speakingStyleCount >= SPEAKING_STYLE_MAX}
             onClick={() => setSpeakingStyleOtherActive((prev) => !prev)}
           />
         </div>

@@ -93,6 +93,7 @@
     "pleaseSpecify": "Please specify",
     "ageLabel": "Age",
     "personalityLabel": "Personality",
+    "personalityHelper": "Choose up to {max}",
     "personalityOtherPlaceholder": "Describe other traits",
     "occupationLabel": "Occupation",
     "relationshipLabel": "Relationship",
@@ -100,6 +101,7 @@
     "settingLabel": "Setting World",
     "settingHelper": "Where does the character usually live in?",
     "speakingStyleLabel": "Speaking Style",
+    "speakingStyleHelper": "Choose up to {max}",
     "speakingStyleOtherPlaceholder": "Describe other speaking style",
     "additionalInfoLabel": "Additional Information",
     "additionalInfoPlaceholder": "Anything else worth knowing (optional)",
@@ -139,6 +141,9 @@
       "Dry humor": "Dry humor",
       "Elegant": "Elegant"
     }
+  },
+  "characterCard": {
+    "relationshipLabel": "Relationship: "
   },
   "characterPage": {
     "notFoundTitle": "Character not found",

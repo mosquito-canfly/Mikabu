@@ -53,6 +53,12 @@ export default function CharacterCard({ character, onDelete, accent = "sky" }: C
       }`}
     >
       <h2 className="text-xl font-bold text-ink">{character.name}</h2>
+      {character.relationship && (
+        <p className="text-sm text-muted">
+          {t("characterCard.relationshipLabel")}
+          {character.relationship}
+        </p>
+      )}
       {personalityPreview && (
         <p className="text-sm text-muted">
           {truncate(personalityPreview, PERSONALITY_PREVIEW_LENGTH)}
