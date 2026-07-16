@@ -6,6 +6,7 @@
     "backHome": "返回首页",
     "tryAgain": "重试",
     "stop": "停止",
+    "edit": "编辑",
     "delete": "删除",
     "loading": "加载中",
     "offlineMessage": "米卡布需要联网才能使用此功能，请检查网络连接后重试。"
@@ -106,7 +107,9 @@
     "additionalInfoLabel": "补充信息",
     "additionalInfoPlaceholder": "还有什么想补充的（可选）",
     "createCharacterTitle": "创建角色",
+    "editCharacterTitle": "编辑角色",
     "submit": "创建角色",
+    "saveChanges": "保存更改",
     "saveError": "无法保存你的角色，请检查网络连接后重试。",
     "personality": {
       "Caring": "体贴",

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useTranslation } from "@/lib/i18n/LocaleProvider";
 import { getCharacterDisplayName } from "@/lib/character";
 import type { Character } from "@/lib/types";
@@ -79,13 +80,22 @@ export default function CharacterCard({ character, onDelete, accent = "sky" }: C
         </>
       )}
 
-      <button
-        type="button"
-        onClick={handleDelete}
-        className="absolute right-3 top-3 rounded-full px-2.5 py-1 text-sm font-medium text-muted transition-colors hover:bg-red-50 hover:text-red-600"
-      >
-        {t("common.delete")}
-      </button>
+      <div className="absolute right-3 top-3 flex items-center gap-1">
+        <Link
+          href={`/edit/${character.id}`}
+          onClick={(e) => e.stopPropagation()}
+          className="rounded-full px-2.5 py-1 text-sm font-medium text-muted transition-colors hover:bg-line/40 hover:text-ink"
+        >
+          {t("common.edit")}
+        </Link>
+        <button
+          type="button"
+          onClick={handleDelete}
+          className="rounded-full px-2.5 py-1 text-sm font-medium text-muted transition-colors hover:bg-red-50 hover:text-red-600"
+        >
+          {t("common.delete")}
+        </button>
+      </div>
     </div>
   );
 }

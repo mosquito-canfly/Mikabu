@@ -8,6 +8,8 @@ type CharacterFormData = Omit<Character, "id" | "createdAt">;
 
 interface CharacterFormProps {
   onSubmit: (data: CharacterFormData) => void;
+  initialValues?: CharacterFormData;
+  submitLabel?: string;
 }
 
 // Values stored on the Character (and sent to the AI prompt builder) are
@@ -23,6 +25,7 @@ const GENDER_OPTIONS: { labelKey: string; value: Character["gender"] }[] = [
 
 const PERSONALITY_OPTIONS = [
   "Caring",
+  "Cute",
   "Cold",
   "Funny",
   "Flirty",
@@ -105,22 +108,28 @@ const inputClasses =
 
 const labelClasses = "text-lg font-medium text-ink";
 
-export default function CharacterForm({ onSubmit }: CharacterFormProps) {
+export default function CharacterForm({ onSubmit, initialValues, submitLabel }: CharacterFormProps) {
   const { t } = useTranslation();
-  const [name, setName] = useState("");
-  const [gender, setGender] = useState<"" | Character["gender"]>("");
-  const [genderOther, setGenderOther] = useState("");
-  const [age, setAge] = useState("");
-  const [personality, setPersonality] = useState<string[]>([]);
-  const [personalityOtherActive, setPersonalityOtherActive] = useState(false);
-  const [personalityOther, setPersonalityOther] = useState("");
-  const [occupation, setOccupation] = useState("");
-  const [relationship, setRelationship] = useState("");
-  const [setting, setSetting] = useState("");
-  const [speakingStyle, setSpeakingStyle] = useState<string[]>([]);
-  const [speakingStyleOtherActive, setSpeakingStyleOtherActive] = useState(false);
-  const [speakingStyleOther, setSpeakingStyleOther] = useState("");
-  const [additionalInfo, setAdditionalInfo] = useState("");
+  const [name, setName] = useState(initialValues?.name ?? "");
+  const [gender, setGender] = useState<"" | Character["gender"]>(initialValues?.gender ?? "");
+  const [genderOther, setGenderOther] = useState(initialValues?.genderOther ?? "");
+  const [age, setAge] = useState(initialValues ? String(initialValues.age) : "");
+  const [personality, setPersonality] = useState<string[]>(initialValues?.personality ?? []);
+  const [personalityOtherActive, setPersonalityOtherActive] = useState(
+    Boolean(initialValues?.personalityOther)
+  );
+  const [personalityOther, setPersonalityOther] = useState(initialValues?.personalityOther ?? "");
+  const [occupation, setOccupation] = useState(initialValues?.occupation ?? "");
+  const [relationship, setRelationship] = useState(initialValues?.relationship ?? "");
+  const [setting, setSetting] = useState(initialValues?.setting ?? "");
+  const [speakingStyle, setSpeakingStyle] = useState<string[]>(initialValues?.speakingStyle ?? []);
+  const [speakingStyleOtherActive, setSpeakingStyleOtherActive] = useState(
+    Boolean(initialValues?.speakingStyleOther)
+  );
+  const [speakingStyleOther, setSpeakingStyleOther] = useState(
+    initialValues?.speakingStyleOther ?? ""
+  );
+  const [additionalInfo, setAdditionalInfo] = useState(initialValues?.additionalInfo ?? "");
 
   const personalityCount = personality.length + (personalityOtherActive ? 1 : 0);
   const speakingStyleCount = speakingStyle.length + (speakingStyleOtherActive ? 1 : 0);
@@ -384,7 +393,7 @@ export default function CharacterForm({ onSubmit }: CharacterFormProps) {
         disabled={!isFormValid}
         className="mt-2 rounded-full bg-ink px-4 py-2.5 text-base font-medium text-paper transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:bg-line disabled:text-muted disabled:opacity-100"
       >
-        {t("characterForm.submit")}
+        {submitLabel ?? t("characterForm.submit")}
       </button>
     </form>
   );

@@ -6,6 +6,7 @@
     "backHome": "Back home",
     "tryAgain": "Try again",
     "stop": "Stop",
+    "edit": "Edit",
     "delete": "Delete",
     "loading": "Loading",
     "offlineMessage": "Mikabu needs an internet connection for this. Please check your connection and try again."
@@ -106,7 +107,9 @@
     "additionalInfoLabel": "Additional Information",
     "additionalInfoPlaceholder": "Anything else worth knowing (optional)",
     "createCharacterTitle": "Create Character",
+    "editCharacterTitle": "Edit Character",
     "submit": "Create Character",
+    "saveChanges": "Save changes",
     "saveError": "Couldn't save your character. Please check your connection and try again.",
     "personality": {
       "Caring": "Caring",
