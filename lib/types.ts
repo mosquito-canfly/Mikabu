@@ -15,6 +15,7 @@ export interface Character {
   speakingStyleOther?: string; // free text when "Other" is ticked
   additionalInfo?: string;    // optional; the only optional field
   createdAt: number;
+  isDefault?: boolean;        // the built-in preset character seeded for new users
 }
 
 export interface Message {

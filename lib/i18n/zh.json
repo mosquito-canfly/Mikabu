@@ -110,6 +110,7 @@
     "saveError": "无法保存你的角色，请检查网络连接后重试。",
     "personality": {
       "Caring": "体贴",
+      "Cute": "可爱",
       "Cold": "高冷",
       "Funny": "幽默",
       "Flirty": "撩人",
@@ -144,6 +145,10 @@
   },
   "characterCard": {
     "relationshipLabel": "关系："
+  },
+  "defaultCharacter": {
+    "name": "米卡布（默认）",
+    "tagline": "打个招呼，马上开始聊天——无需任何设置！"
   },
   "characterPage": {
     "notFoundTitle": "未找到该角色",

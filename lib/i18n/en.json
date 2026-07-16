@@ -110,6 +110,7 @@
     "saveError": "Couldn't save your character. Please check your connection and try again.",
     "personality": {
       "Caring": "Caring",
+      "Cute": "Cute",
       "Cold": "Cold",
       "Funny": "Funny",
       "Flirty": "Flirty",
@@ -144,6 +145,10 @@
   },
   "characterCard": {
     "relationshipLabel": "Relationship: "
+  },
+  "defaultCharacter": {
+    "name": "Mikabu (default)",
+    "tagline": "Say hi and start chatting — no setup needed!"
   },
   "characterPage": {
     "notFoundTitle": "Character not found",

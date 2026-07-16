@@ -8,6 +8,7 @@ import LoadingBar from "@/components/LoadingBar";
 import { deleteSession, getSessionsForCharacter, saveSession } from "@/lib/storage";
 import { isOfflineError } from "@/lib/network";
 import { useTranslation } from "@/lib/i18n/LocaleProvider";
+import { getCharacterDisplayName } from "@/lib/character";
 import type { Character, ChatSession, Message } from "@/lib/types";
 
 interface ChatWindowProps {
@@ -137,6 +138,7 @@ export default function ChatWindow({ character }: ChatWindowProps) {
     };
   }, [character.id, retryToken]);
 
+  const displayName = getCharacterDisplayName(character, t);
   const activeSession = sessions.find((s) => s.id === activeSessionId);
   const messages = activeSession?.messages ?? [];
   const sortedSessions = [...sessions].sort((a, b) => b.updatedAt - a.updatedAt);
@@ -368,7 +370,7 @@ export default function ChatWindow({ character }: ChatWindowProps) {
           <div className="mx-auto flex w-full max-w-2xl flex-col gap-3">
             {messages.length === 0 && (
               <p className="text-center text-base text-muted">
-                {t("chat.sayHello", { name: character.name })}
+                {t("chat.sayHello", { name: displayName })}
               </p>
             )}
 
@@ -379,7 +381,7 @@ export default function ChatWindow({ character }: ChatWindowProps) {
             {isLoading && (
               <div className="flex w-full justify-start">
                 <div className="max-w-[75%] rounded-2xl bg-line/50 px-4 py-2.5 text-base text-muted">
-                  {t("chat.typing", { name: character.name })}
+                  {t("chat.typing", { name: displayName })}
                 </div>
               </div>
             )}

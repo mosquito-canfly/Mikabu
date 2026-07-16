@@ -10,6 +10,7 @@ import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useAuth } from "@/components/AuthProvider";
 import { useTranslation } from "@/lib/i18n/LocaleProvider";
 import { getCharacter } from "@/lib/storage";
+import { getCharacterDisplayName } from "@/lib/character";
 import type { Character } from "@/lib/types";
 
 export default function CharacterPage() {
@@ -73,7 +74,9 @@ export default function CharacterPage() {
         >
           {t("common.back")}
         </Link>
-        <h1 className="min-w-0 flex-1 truncate text-xl font-bold text-ink">{character.name}</h1>
+        <h1 className="min-w-0 flex-1 truncate text-xl font-bold text-ink">
+          {getCharacterDisplayName(character, t)}
+        </h1>
         <div className="shrink-0">
           <ModeToggle mode={mode} onChange={setMode} />
         </div>

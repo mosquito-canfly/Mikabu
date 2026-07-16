@@ -13,7 +13,7 @@ import { useTranslation } from "@/lib/i18n/LocaleProvider";
 import { createClient } from "@/lib/supabase/client";
 import {
   deleteCharacter,
-  getCharacters,
+  ensureDefaultCharacterSeeded,
   getLocalDataSnapshot,
   hasDismissedImportThisSession,
   hasImportedForUser,
@@ -46,7 +46,7 @@ export default function Home() {
     setCharactersLoading(true);
     setError(null);
 
-    getCharacters()
+    ensureDefaultCharacterSeeded()
       .then((data) => {
         if (cancelled) return;
         setCharacters(data);

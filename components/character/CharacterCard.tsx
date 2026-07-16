@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useTranslation } from "@/lib/i18n/LocaleProvider";
+import { getCharacterDisplayName } from "@/lib/character";
 import type { Character } from "@/lib/types";
 
 interface CharacterCardProps {
@@ -19,7 +20,7 @@ function truncate(text: string, length: number): string {
 
 export default function CharacterCard({ character, onDelete, accent = "sky" }: CharacterCardProps) {
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t, tOrFallback } = useTranslation();
 
   function handleCardClick() {
     router.push(`/chat/${character.id}`);
@@ -37,10 +38,17 @@ export default function CharacterCard({ character, onDelete, accent = "sky" }: C
     onDelete(character.id);
   }
 
-  const personalityPreview = [
-    ...character.personality.map((trait) => t(`characterForm.personality.${trait}`)),
-    ...(character.personalityOther ? [character.personalityOther] : []),
-  ].join(", ");
+  // The default character's personality is never shown (its card shows a
+  // tagline instead), so it must never be looked up here either — otherwise
+  // its hidden traits still hit the translation table on every render.
+  const personalityPreview = character.isDefault
+    ? ""
+    : [
+        ...character.personality.map((trait) =>
+          tOrFallback(`characterForm.personality.${trait}`, trait)
+        ),
+        ...(character.personalityOther ? [character.personalityOther] : []),
+      ].join(", ");
 
   return (
     <div
@@ -52,17 +60,23 @@ export default function CharacterCard({ character, onDelete, accent = "sky" }: C
         accent === "star" ? "border-t-star" : "border-t-sky"
       }`}
     >
-      <h2 className="text-xl font-bold text-ink">{character.name}</h2>
-      {character.relationship && (
-        <p className="text-sm text-muted">
-          {t("characterCard.relationshipLabel")}
-          {character.relationship}
-        </p>
-      )}
-      {personalityPreview && (
-        <p className="text-sm text-muted">
-          {truncate(personalityPreview, PERSONALITY_PREVIEW_LENGTH)}
-        </p>
+      <h2 className="text-xl font-bold text-ink">{getCharacterDisplayName(character, t)}</h2>
+      {character.isDefault ? (
+        <p className="text-sm text-muted">{t("defaultCharacter.tagline")}</p>
+      ) : (
+        <>
+          {character.relationship && (
+            <p className="text-sm text-muted">
+              {t("characterCard.relationshipLabel")}
+              {character.relationship}
+            </p>
+          )}
+          {personalityPreview && (
+            <p className="text-sm text-muted">
+              {truncate(personalityPreview, PERSONALITY_PREVIEW_LENGTH)}
+            </p>
+          )}
+        </>
       )}
 
       <button

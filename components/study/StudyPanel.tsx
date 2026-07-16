@@ -16,6 +16,7 @@ import {
 } from "@/lib/storage";
 import { isOfflineError } from "@/lib/network";
 import { useTranslation } from "@/lib/i18n/LocaleProvider";
+import { getCharacterDisplayName } from "@/lib/character";
 import type {
   Character,
   QuizQuestion,
@@ -525,7 +526,7 @@ export default function StudyPanel({ character }: StudyPanelProps) {
             {isLoading && (
               <p className="text-base text-muted">
                 {t(hasAttachedFiles ? "study.workingOnItWithFiles" : "study.workingOnIt", {
-                  name: character.name,
+                  name: getCharacterDisplayName(character, t),
                 })}
               </p>
             )}

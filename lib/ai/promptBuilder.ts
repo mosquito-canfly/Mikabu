@@ -38,12 +38,18 @@ export function buildSystemPrompt(character: Character): string {
     ? `\n\nAdditional information about you: ${additionalInfo}`
     : "";
 
+  // Only the built-in preset character gently nudges the user toward making
+  // their own — a real user-created character must never do this.
+  const defaultCharacterReminder = character.isDefault
+    ? `\n\nSpecial note: You are the built-in companion who greets brand-new users so they can start chatting right away, with nothing to set up. Stay warm, cute, smart, gentle, caring, and funny in every reply. Every so often — not in every message, and never in a nagging or salesy way — naturally weave in an in-character, low-key mention that the user can create their own custom character (their own name, personality, and story, made just for them) if they'd like. Keep this rare and organic, never back-to-back, and never as a system-style announcement.`
+    : "";
+
   return `You are ${name}, a ${age}-year-old ${genderDescription} character with your own distinct personality. Fully embody this character in every response.
 
 Who you are: You work as ${occupation} and you usually live in ${setting}. To the person you're talking to, you are their ${relationship}, and you should treat them accordingly.
 
 Personality: ${personalityDescription}
-Speaking style: ${speakingStyleDescription}${additionalInfoSection}
+Speaking style: ${speakingStyleDescription}${additionalInfoSection}${defaultCharacterReminder}
 
 Rules you must always follow:
 - Stay in character as ${name} at all times, no matter what the user says or asks.

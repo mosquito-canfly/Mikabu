@@ -1,5 +1,6 @@
 import { createClient } from "./supabase/client";
 import { deleteStudyFilesForSession } from "./storage/files";
+import { createDefaultCharacter, hasDefaultCharacter } from "./defaultCharacter";
 import type { Character, ChatSession, StudySession } from "./types";
 
 const CHARACTERS_KEY = "mikabu:characters";
@@ -186,9 +187,20 @@ interface DataRow<T> {
   data: T;
 }
 
+// The friendly messages thrown below are meant for real connectivity issues,
+// not config/type errors (e.g. a non-uuid id sent to a uuid column). Always
+// log the underlying Supabase error first so those don't get silently
+// disguised as "check your connection" in the console.
+function logSupabaseError(context: string, error: { message: string; code?: string }): void {
+  console.error(`Supabase error in ${context}: ${error.message} (code: ${error.code ?? "unknown"})`);
+}
+
 async function dbGetAllForUser<T>(table: string, userId: string): Promise<T[]> {
   const { data, error } = await getSupabase().from(table).select("data").eq("user_id", userId);
-  if (error) throw new Error(LOAD_FAILED_MESSAGE);
+  if (error) {
+    logSupabaseError(`dbGetAllForUser(${table})`, error);
+    throw new Error(LOAD_FAILED_MESSAGE);
+  }
   return ((data ?? []) as DataRow<T>[]).map((row) => row.data);
 }
 
@@ -198,7 +210,10 @@ async function dbGetForCharacter<T>(table: string, userId: string, characterId: 
     .select("data")
     .eq("user_id", userId)
     .eq("character_id", characterId);
-  if (error) throw new Error(LOAD_FAILED_MESSAGE);
+  if (error) {
+    logSupabaseError(`dbGetForCharacter(${table})`, error);
+    throw new Error(LOAD_FAILED_MESSAGE);
+  }
   return ((data ?? []) as DataRow<T>[]).map((row) => row.data);
 }
 
@@ -209,18 +224,27 @@ async function dbGetOne<T>(table: string, userId: string, id: string): Promise<T
     .eq("user_id", userId)
     .eq("id", id)
     .maybeSingle();
-  if (error) throw new Error(LOAD_FAILED_MESSAGE);
+  if (error) {
+    logSupabaseError(`dbGetOne(${table})`, error);
+    throw new Error(LOAD_FAILED_MESSAGE);
+  }
   return (data as DataRow<T> | null)?.data;
 }
 
 async function dbUpsert(table: string, row: Record<string, unknown>): Promise<void> {
   const { error } = await getSupabase().from(table).upsert(row);
-  if (error) throw new Error(SAVE_FAILED_MESSAGE);
+  if (error) {
+    logSupabaseError(`dbUpsert(${table})`, error);
+    throw new Error(SAVE_FAILED_MESSAGE);
+  }
 }
 
 async function dbDeleteOne(table: string, userId: string, id: string): Promise<void> {
   const { error } = await getSupabase().from(table).delete().eq("user_id", userId).eq("id", id);
-  if (error) throw new Error(DELETE_FAILED_MESSAGE);
+  if (error) {
+    logSupabaseError(`dbDeleteOne(${table})`, error);
+    throw new Error(DELETE_FAILED_MESSAGE);
+  }
 }
 
 async function dbDeleteForCharacter(table: string, userId: string, characterId: string): Promise<void> {
@@ -229,7 +253,10 @@ async function dbDeleteForCharacter(table: string, userId: string, characterId: 
     .delete()
     .eq("user_id", userId)
     .eq("character_id", characterId);
-  if (error) throw new Error(DELETE_FAILED_MESSAGE);
+  if (error) {
+    logSupabaseError(`dbDeleteForCharacter(${table})`, error);
+    throw new Error(DELETE_FAILED_MESSAGE);
+  }
 }
 
 async function getCharactersDb(userId: string): Promise<Character[]> {
@@ -343,6 +370,43 @@ async function nextStudyNumberDb(userId: string, characterId: string): Promise<n
 export async function getCharacters(): Promise<Character[]> {
   const userId = await getCurrentUserId();
   return userId ? getCharactersDb(userId) : getCharactersLocal();
+}
+
+// Keyed by user id (or "local" while logged out) so concurrent mounts of the
+// home page — React StrictMode's double-invoke, or a fast remount while auth
+// is still settling — await the same in-flight check instead of each seeing
+// "no default yet" and racing to create their own. Mirrors the guard
+// ChatWindow uses for chat-session initialization.
+const defaultSeedInFlight = new Map<string, Promise<Character[]>>();
+
+export async function ensureDefaultCharacterSeeded(): Promise<Character[]> {
+  const userId = await getCurrentUserId();
+  const key = userId ?? "local";
+
+  const inFlight = defaultSeedInFlight.get(key);
+  if (inFlight) return inFlight;
+
+  const promise = (async () => {
+    const characters = userId ? await getCharactersDb(userId) : getCharactersLocal();
+    if (hasDefaultCharacter(characters)) return characters;
+
+    const defaultCharacter = createDefaultCharacter();
+    if (userId) {
+      await saveCharacterDb(userId, defaultCharacter);
+    } else {
+      saveCharacterLocal(defaultCharacter);
+    }
+    return [defaultCharacter, ...characters];
+  })();
+
+  defaultSeedInFlight.set(key, promise);
+  promise.finally(() => {
+    if (defaultSeedInFlight.get(key) === promise) {
+      defaultSeedInFlight.delete(key);
+    }
+  });
+
+  return promise;
 }
 
 export async function getCharacter(id: string): Promise<Character | undefined> {

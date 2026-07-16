@@ -34,6 +34,7 @@ interface LocaleContextValue {
   locale: Locale;
   setLocale: (locale: Locale) => void;
   t: (key: string, params?: TranslationParams) => string;
+  tOrFallback: (key: string, fallback: string) => string;
 }
 
 const LocaleContext = createContext<LocaleContextValue | null>(null);
@@ -75,7 +76,24 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     [locale]
   );
 
-  return <LocaleContext.Provider value={{ locale, setLocale, t }}>{children}</LocaleContext.Provider>;
+  // For lookups where a miss is expected and not a bug — e.g. a stored
+  // personality/speaking-style value that predates a preset rename, or free
+  // text — so those don't spam console.error the way a genuinely missing UI
+  // string should.
+  const tOrFallback = useCallback(
+    (key: string, fallback: string) => {
+      const path = key.split(".");
+      const value = resolveKey(TRANSLATIONS[locale], path) ?? resolveKey(TRANSLATIONS.en, path);
+      return typeof value === "string" ? value : fallback;
+    },
+    [locale]
+  );
+
+  return (
+    <LocaleContext.Provider value={{ locale, setLocale, t, tOrFallback }}>
+      {children}
+    </LocaleContext.Provider>
+  );
 }
 
 export function useTranslation() {
