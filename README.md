@@ -266,10 +266,6 @@ you redeploy.
 `vercel.json` schedules a cron job that hits `/api/health` every few days to keep the
 Supabase project active — see [Notes and limitations](#notes-and-limitations).
 
-## Roadmap
-
-- [ ] Character avatars
-
 ## Notes and limitations
 
 - **Logged out, data stays on that device.** There's no account tying it together, so
