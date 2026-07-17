@@ -26,10 +26,16 @@ wall of notes alone.
 
 ## Features
 
-- **Character creation** — name, gender, age, a multi-select set of personality traits
-  (with a free-text "Other" option), occupation, relationship to you, the world they
-  live in, speaking style, and optional extra notes. Required fields are enforced before
-  a character can be created.
+- **Character creation** — name, gender, age, personality traits (up to 5, multi-select
+  with a free-text "Other" option), occupation, relationship to you, the world they live
+  in, speaking style (up to 3, same free-text option), and optional extra notes. Required
+  fields are enforced before a character can be created. A character's card on the home
+  page shows their relationship to you at a glance.
+- **Character editing** — every field can be changed after creation, using the exact same
+  form as character creation.
+- **A character to start with** — new users get a built-in character, "Mikabu (default)",
+  so they can try the app immediately without creating one. It gently nudges them toward
+  making their own custom character, and stays available alongside anything they create.
 - **Chat mode** — natural in-character conversation with full memory: the entire
   conversation history is sent back to the model on every turn, so the character
   actually remembers what you talked about. Multiple chat sessions per character, each
@@ -63,6 +69,24 @@ wall of notes alone.
   local work into your account.
 - **Data that follows you** — once signed in, characters, chats, and study sessions sync
   across devices instead of staying tied to one browser.
+- **Bilingual interface** — switch between English and Mandarin (米卡布) from anywhere in
+  the app; the choice is remembered on that device.
+- **Installable PWA** — add Mikabu to your phone's home screen and it opens fullscreen
+  with its own icon, like a native app. See [Installing on your phone](#installing-on-your-phone).
+
+## Installing on your phone
+
+Mikabu is an installable PWA (Progressive Web App) — add it to your home screen and it
+opens fullscreen with its own icon, like a native app. No app store involved.
+
+**Android (Chrome):** open **[mikabu.vercel.app](https://mikabu.vercel.app/)**, then either
+tap the "Install app" prompt Chrome offers, or open the browser menu (⋮) and choose
+**Install app** / **Add to Home screen**.
+
+**iPhone / iPad (Safari):** open **[mikabu.vercel.app](https://mikabu.vercel.app/)** in
+Safari, tap the **Share** button, then **Add to Home Screen**. Safari doesn't show an
+automatic install prompt — it has to be done manually through Share — and installing from
+Chrome on iOS doesn't work; it has to be Safari.
 
 ## Preview
 
@@ -126,16 +150,18 @@ app/
 │   └── study/route.ts       # POST — explain / quiz / summary
 ├── chat/[characterId]/page.tsx  # character page (chat + study toggle)
 ├── create/page.tsx          # character creation
+├── edit/[characterId]/page.tsx  # character editing (reuses CharacterForm)
 ├── globals.css              # design tokens, base styles
 ├── icon.png                 # app icon / favicon
 ├── layout.tsx                # root layout, font, metadata, AuthProvider
 ├── login/page.tsx            # email/password log in
+├── manifest.ts                # PWA manifest (name, icons, standalone display)
 ├── page.tsx                  # home page (character list)
 └── signup/page.tsx           # email/password sign up
 components/
 ├── character/
 │   ├── CharacterCard.tsx
-│   └── CharacterForm.tsx
+│   └── CharacterForm.tsx      # shared by character creation and editing
 ├── chat/
 │   ├── ChatInput.tsx
 │   ├── ChatWindow.tsx
@@ -147,17 +173,27 @@ components/
 │   └── StudyToolbar.tsx
 ├── AuthProvider.tsx           # session/user context, wraps the app
 ├── ImportLocalDataDialog.tsx  # offers to import local data on sign-in
+├── LanguageSwitcher.tsx       # English/Mandarin locale toggle
 ├── LoadingBar.tsx
 ├── Logo.tsx
 ├── MarkdownContent.tsx
 ├── ModeToggle.tsx
+├── ServiceWorkerRegistration.tsx  # registers the PWA service worker (production only)
+├── SessionDrawer.tsx          # mobile slide-out wrapper around SessionSidebar
 └── SessionSidebar.tsx        # shared sidebar used by both modes
 lib/
 ├── ai/
 │   ├── client.ts             # only file that imports the provider SDK
 │   └── promptBuilder.ts      # persona + task prompt construction
+├── i18n/
+│   ├── en.json                # English strings
+│   ├── zh.json                # Mandarin strings
+│   └── LocaleProvider.tsx     # locale context, t()/tOrFallback() lookup
 ├── storage/
 │   └── files.ts               # Supabase Storage upload/download for study files
+├── character.ts                # display-name helper (localizes the default character's name)
+├── defaultCharacter.ts         # builds and detects the built-in "Mikabu (default)" character
+├── network.ts                   # tells "you're offline" apart from "the AI call failed"
 ├── storage.ts                 # routes reads & writes to localStorage or Supabase
 ├── supabase/
 │   ├── client.ts               # browser Supabase client
@@ -165,7 +201,9 @@ lib/
 └── types.ts                   # shared TypeScript types
 middleware.ts                  # refreshes the Supabase session cookie on every request
 public/
-└── logo.png                   # logo used in the in-app lockup
+├── icons/                     # PWA icon set (192/512, regular and maskable)
+├── logo.png                   # logo used in the in-app lockup
+└── sw.js                      # service worker — stale-while-revalidate app-shell cache
 ```
 
 ## Running it locally
@@ -230,8 +268,6 @@ Supabase project active — see [Notes and limitations](#notes-and-limitations).
 
 ## Roadmap
 
-- [ ] Installable PWA
-- [ ] Multi-language interface (English and Mandarin)
 - [ ] Character avatars
 
 ## Notes and limitations
